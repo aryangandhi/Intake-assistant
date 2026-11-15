@@ -366,3 +366,50 @@ test("Unusual medication dose asks \"Are you sure?\" and never blocks", async ({
   await mcc.getByRole("button", { name: "Yes", exact: true }).click();
   await mcc.getByRole("button", { name: "Next →" }).click();
 });
+
+test("Confirmed unusual dose reaches the oncologist's summary, flags and clinic note", async ({ page, context }) => {
+  await page.goto("/inbox");
+  await loginWith(page, "jane.doe@example.com");
+  await page.getByRole("link", { name: /Action needed: Complete your new patient intake form/ }).click();
+  const mcc = await openFromEmail(context, page, /Open MyConnectedCare/);
+  await mcc.getByRole("link", { name: /Questionnaires/ }).click();
+  await mcc.getByRole("link", { name: "Start Intake Form" }).click();
+  await mcc.waitForLoadState("networkidle");
+  for (let i = 0; i < 10 && !(await mcc.locator("#in-med_list").count()); i++) {
+    await mcc.getByRole("button", { name: "Next →" }).click();
+  }
+
+  // Two medications: one normal, one unusual that the patient confirms with Yes.
+  await mcc.locator("#in-med_list").fill("Ramipril");
+  await mcc.locator("#in-med_list-0-dose").fill("10 mg");
+  await mcc.locator("#in-med_list-0-frequency").fill("once a day");
+  await mcc.getByRole("button", { name: "+ Add another" }).click();
+  await mcc.locator("#in-med_list-1-name").fill("Metformin");
+  await mcc.locator("#in-med_list-1-dose").fill("100 g/day");
+  await mcc.locator("#in-med_list-1-frequency").fill("once a day");
+  await mcc.locator("#in-med_list-1-frequency").blur();
+  await expect(mcc.getByTestId("med-warning")).toHaveCount(1);
+  await expect(mcc.getByTestId("med-warning")).toContainText("Are you sure about your dose of Metformin 100 g/day/once a day?");
+  await mcc.getByRole("button", { name: "Yes", exact: true }).click();
+  await expect(mcc.getByTestId("med-warning")).toHaveCount(0);
+
+  // Walk to the review step and submit (gaps are allowed).
+  for (let i = 0; i < 15 && !(await mcc.getByRole("button", { name: "Send to my care team" }).count()); i++) {
+    await mcc.getByRole("button", { name: "Next →" }).click();
+  }
+  await mcc.getByRole("button", { name: "Send to my care team" }).click();
+  await expect(mcc.getByRole("heading", { name: "Thank you, your intake form has been sent to your care team." })).toBeVisible();
+
+  // Oncologist: raw data tag, summary bullet, flagged item, then the clinic note.
+  const emr = await context.newPage();
+  await oncologistOpensLatestIntake(emr, "Doe, Jane");
+  await expect(emr.getByText("AI Summary (paragraph)")).toBeVisible({ timeout: 30_000 });
+  await expect(emr.locator("#raw-med_list")).toContainText("Metformin, 100 g/day, once a day (patient confirmed this unusual dose)");
+  await expect(emr.locator("#raw-med_list")).toContainText("Ramipril, 10 mg, once a day");
+  await expect(emr.locator("#raw-med_list")).not.toContainText("Ramipril, 10 mg, once a day (patient confirmed");
+  await expect(emr.getByText(/Patient confirmed this dose as correct when asked "Are you sure\?": Metformin, 100 g\/day, once a day/).first()).toBeVisible();
+  await expect(emr.getByRole("button", { name: /Unusual dose confirmed by patient: Metformin/ })).toBeVisible();
+
+  await emr.getByRole("button", { name: "Copy to clinic note" }).click();
+  await expect(emr.locator("#currentMedications")).toHaveValue(/Metformin, 100 g\/day, once a day.*Please verify/s);
+});

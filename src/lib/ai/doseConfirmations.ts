@@ -26,6 +26,7 @@ export function applyDoseConfirmations<T extends ModelSummary>(summary: T, items
     summary.sections.push(section);
   }
   for (const d of doses) {
+    if (section.bullets.some((b) => b.text.includes(`: ${d}.`) && b.text.includes("confirmed this dose as correct"))) continue; // already added
     section.bullets.push({ text: `Patient confirmed this dose as correct when asked "Are you sure?": ${d}. Please verify at the visit.`, citations: ["med_list"] });
     summary.flagged.push({ field_id: "med_list", note: `Unusual dose confirmed by patient: ${d}. Please verify.` });
   }

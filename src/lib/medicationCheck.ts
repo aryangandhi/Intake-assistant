@@ -30,12 +30,26 @@ const MAX_DAILY_MG: Record<string, number> = {
 
 export type MedicationWarning = { message: string };
 
-const TO_MG: Record<string, number> = { mg: 1, g: 1000, mcg: 0.001, ug: 0.001, µg: 0.001 };
+
+/** Reads "1,500", "1 500", "0,5" (decimal comma) and "0.5" as numbers. */
+function parseNumber(raw: string): number {
+  let t = raw.replace(/\s/g, "");
+  if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(t)) t = t.replace(/,/g, ""); // thousands separators
+  else t = t.replace(",", "."); // decimal comma
+  return parseFloat(t);
+}
+
+const UNIT = "milligrams?|micrograms?|grams?|mcg|mg|µg|ug|g";
+const unitMg = (u: string) => (u.startsWith("milli") ? 1 : u.startsWith("micro") || u === "mcg" || u === "µg" || u === "ug" ? 0.001 : u.startsWith("gram") || u === "g" ? 1000 : 1);
 
 function parseDoseMg(dose: string): { mg: number; perDay: boolean } | null {
-  const m = dose.toLowerCase().match(/(\d+(?:\.\d+)?)\s*(mg|mcg|µg|ug|g)\b/);
+  const lower = dose.toLowerCase();
+  const m = lower.match(new RegExp(`(\\d[\\d,. ]*\\d|\\d)\\s*(${UNIT})\\b`));
   if (!m) return null;
-  return { mg: parseFloat(m[1]) * TO_MG[m[2]], perDay: /(\/|per|a|each)\s*day|daily total/.test(dose.toLowerCase()) };
+  // "2 x 500 mg", "2 tablets of 500 mg": multiply by the count in front.
+  const count = lower.slice(0, m.index).match(/(\d+)\s*(?:x|×|tablets?|tabs?|capsules?|caps?|pills?)\s*(?:of\s*)?$/);
+  const mult = count ? parseInt(count[1], 10) : 1;
+  return { mg: parseNumber(m[1]) * unitMg(m[2]) * mult, perDay: /(\/|per|a|each)\s*day|daily total/.test(lower) };
 }
 
 const WORDS: Record<string, number> = { once: 1, one: 1, twice: 2, two: 2, three: 3, four: 4, five: 5, six: 6 };
@@ -43,8 +57,10 @@ const WORDS: Record<string, number> = { once: 1, one: 1, twice: 2, two: 2, three
 /** Doses per day, or null when it cannot be read. */
 function parseDosesPerDay(freq: string): number | null {
   const f = freq.toLowerCase();
-  const every = f.match(/every\s+(\d+(?:\.\d+)?)\s*(hour|hr|h)\b/);
+  const every = f.match(/(?:every\s+|\bq\s?)(\d+(?:\.\d+)?)\s*(hours?|hrs?|h)\b/);
   if (every) return 24 / parseFloat(every[1]);
+  const abbr = f.match(/\b(qd|od|bid|tid|qid)\b/);
+  if (abbr) return { qd: 1, od: 1, bid: 2, tid: 3, qid: 4 }[abbr[1]]!;
   if (/week/.test(f)) return 1 / 7;
   const num = f.match(/(\d+)\s*(x|times)/);
   if (num) return parseInt(num[1], 10);
