@@ -10,7 +10,7 @@ describe("dose formats the parser should understand", () => {
   });
   it("reads spelled-out units (100 grams)", () => {
     expect(checkMedication("Metformin", "100 grams", "once a day")).not.toBeNull();
-    expect(checkMedication("Metformin", "100000 milligrams", "once a day")).not.toBeNull();
+    expect(checkMedication("Metformin", "100,000 milligrams", "once a day")).not.toBeNull();
   });
   it("multiplies tablet counts (2 x 500 mg four times a day is 4 g of metformin)", () => {
     expect(checkMedication("Metformin", "2 x 500 mg", "four times a day")).not.toBeNull();
