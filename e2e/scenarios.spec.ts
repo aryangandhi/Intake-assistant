@@ -328,3 +328,41 @@ test("Scenario 4: demo shortcuts (random fill on both forms, info button, copy a
   expect(copied).toContain("Current medications\n- ");
   expect(copied).toContain("Psychosocial\n- ");
 });
+
+test("Unusual medication dose asks \"Are you sure?\" and never blocks", async ({ page, context }) => {
+  await page.goto("/inbox");
+  await loginWith(page, "jane.doe@example.com");
+  await page.getByRole("link", { name: /Action needed: Complete your new patient intake form/ }).click();
+  const mcc = await openFromEmail(context, page, /Open MyConnectedCare/);
+  await mcc.getByRole("link", { name: /Questionnaires/ }).click();
+  await mcc.getByRole("link", { name: "Start Intake Form" }).click();
+  await mcc.waitForLoadState("networkidle");
+
+  // Jump to the medications step by going Next until its field exists.
+  for (let i = 0; i < 10 && !(await mcc.locator("#in-med_list").count()); i++) {
+    await mcc.getByRole("button", { name: "Next →" }).click();
+  }
+  await mcc.locator("#in-med_list").fill("Metformin");
+  await mcc.locator("#in-med_list-0-dose").fill("100 g/day");
+  await mcc.locator("#in-med_list-0-frequency").click(); // leaves the dose box
+  const warning = mcc.getByTestId("med-warning");
+  await expect(warning).toContainText("Are you sure about your dose of Metformin 100 g/day?");
+
+  // "No" focuses the dose box; a normal dose clears the notice.
+  await warning.getByRole("button", { name: "No", exact: true }).click();
+  await expect(mcc.locator("#in-med_list-0-dose")).toBeFocused();
+  await mcc.locator("#in-med_list-0-dose").fill("500 mg");
+  await mcc.locator("#in-med_list-0-frequency").fill("twice a day");
+  await expect(warning).toHaveCount(0);
+
+  // "Yes" dismisses it, and the form still moves on. Editing the dose afterwards asks again.
+  await mcc.locator("#in-med_list-0-dose").fill("100 g/day");
+  await mcc.locator("#in-med_list-0-frequency").click();
+  await mcc.getByRole("button", { name: "Yes", exact: true }).click();
+  await expect(warning).toHaveCount(0);
+  await mcc.locator("#in-med_list-0-dose").fill("200 g/day");
+  await mcc.locator("#in-med_list-0-frequency").click();
+  await expect(warning).toContainText("Metformin 200 g/day");
+  await mcc.getByRole("button", { name: "Yes", exact: true }).click();
+  await mcc.getByRole("button", { name: "Next →" }).click();
+});

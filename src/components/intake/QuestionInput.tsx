@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Question } from "@/config/intakeQuestions";
 import type { AnswerValue, RepeatValue } from "@/lib/answers";
+import { CONFIRM_KEY, checkMedication, confirmationQuestion, isConfirmedUnusual, medSignature } from "@/lib/medicationCheck";
 
 type SR = {
   lang: string;
@@ -203,6 +204,8 @@ export function QuestionInput({
     ? "w-full rounded border border-gray-400 px-2 py-1 text-sm"
     : "w-full rounded-lg border-2 border-gray-500 px-3 py-3 text-lg focus:border-teal-700";
   const showMic = voice && q.voice && !dense;
+  // Medication rows to check once the person has left one of their boxes.
+  const [checkedRows, setCheckedRows] = useState<Record<number, boolean>>({});
 
   switch (q.type) {
     case "text":
@@ -297,7 +300,7 @@ export function QuestionInput({
           {!r.none && (
             <>
               {items.map((it, idx) => (
-                <div key={idx} className={dense ? "flex items-end gap-2" : "rounded-lg border border-gray-300 bg-gray-50 p-3"}>
+                <div key={idx} className={dense ? "flex flex-wrap items-end gap-2" : "rounded-lg border border-gray-300 bg-gray-50 p-3"}>
                   <div className={`grid flex-1 gap-2 ${dense ? "" : "sm:gap-3"}`} style={{ gridTemplateColumns: dense ? `repeat(${fields.length}, minmax(0,1fr))` : undefined }}>
                     {fields.map((f, fi) => {
                       const fid = idx === 0 && fi === 0 ? inputId : `in-${q.id}-${idx}-${f.id}`;
@@ -312,6 +315,7 @@ export function QuestionInput({
                               <input
                                 id={fid}
                                 className={base}
+                                onBlur={() => q.id === "med_list" && setCheckedRows((c) => ({ ...c, [idx]: true }))}
                                 value={it[f.id] || ""}
                                 onChange={(e) => {
                                   const next = items.map((x, j) => (j === idx ? { ...x, [f.id]: e.target.value } : x));
@@ -334,6 +338,32 @@ export function QuestionInput({
                       );
                     })}
                   </div>
+                  {q.id === "med_list" && checkedRows[idx] && (() => {
+                    const w = checkMedication(it.name || "", it.dose || "", it.frequency || "");
+                    if (!w || isConfirmedUnusual(it)) return null;
+                    const setRow = (patch: Record<string, string>) => set({ none: false, items: items.map((x, j) => (j === idx ? { ...x, ...patch } : x)) });
+                    return (
+                      <div role="alert" data-testid="med-warning" className={`mt-2 w-full basis-full rounded-lg border-2 border-amber-600 bg-amber-50 text-gray-900 ${dense ? "p-2 text-xs" : "p-3 text-lg"}`}>
+                        <p className="font-semibold">{confirmationQuestion(it)}</p>
+                        <p>{w.message}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <button type="button" onClick={() => setRow({ [CONFIRM_KEY]: medSignature(it) })} className="rounded-md border-2 border-teal-700 px-4 py-1 font-semibold text-teal-800 hover:bg-teal-50">
+                            Yes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRow({ [CONFIRM_KEY]: "" });
+                              document.getElementById(`in-${q.id}-${idx}-dose`)?.focus();
+                            }}
+                            className="rounded-md border-2 border-gray-500 px-4 py-1 font-semibold hover:bg-gray-100"
+                          >
+                            No
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {items.length > 1 && (
                     <button
                       type="button"

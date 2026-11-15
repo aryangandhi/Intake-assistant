@@ -69,3 +69,13 @@ Where the brief was unclear, I chose the simplest option that keeps the demo wor
 - "Demo: fill in randomly" on the patient form and the PowerForm fills every blank question with believable answers. Answers already typed are kept.
 - AI point-form summary has a "Copy all points" button. Copy buttons fall back to a non-clipboard-API copy when the page is opened over plain http (e.g. a second laptop on the same Wi-Fi).
 - The "Open MyConnectedCare" email button now redirects with a relative URL. Before, it redirected to localhost, which failed on a teammate's laptop through the Cloudflare tunnel.
+
+## v3: unusual medication check ("Are you sure?")
+- When a patient (or nurse) leaves a medication row's dose or "how often" box, the row is checked for doses that look like typing mistakes, e.g. metformin 100 g/day (typical maximum about 3 g/day). If it looks unusual, a notice under the row asks **"Are you sure about your dose of {medication} {dose}/{frequency}?"** with two buttons: **Yes** and **No**.
+- **No** moves the cursor to the dose box so they can fix it, and clears any earlier Yes for that row. **Yes** records that the person confirmed the dose. Editing the name, dose or frequency afterwards cancels the confirmation and asks again.
+- This is a typing check, not medical advice. It never blocks saving or submitting, and it never changes what was typed.
+- A row is "unusual" when the total per day is above the typical maximum for a short list of common medications kept in `src/lib/medicationCheck.ts` (metformin, ramipril, acetaminophen, tamoxifen and others), or, for any medication, a single dose of 10 g or more, or more than 12 doses a day. Medications not in the list are only checked with the generic rules.
+- Doses are read in mg, g or mcg; "/day", "per day" or "a day" in the dose box means the dose is already a daily total. Entries that cannot be read (for example "as directed") are not flagged.
+- **The confirmation travels with the answer.** It is saved on the medication row, and the raw data shows that row as, e.g., "Metformin, 100 g/day, once a day (patient confirmed this unusual dose)".
+- **AI summary and consultation note:** every confirmed unusual dose is (1) added as a bullet under Current medications ("Patient confirmed this dose as correct when asked 'Are you sure?': …. Please verify at the visit.") and (2) added to Flagged / missing items. This is added by code after the AI responds (and in the template fallback), so it does not depend on the model. "Copy to clinic note" copies the Current medications bullet into the note. The AI is told never to change or "correct" the dose.
+- A row where the person answered No and left the dose unchanged is not marked as confirmed.

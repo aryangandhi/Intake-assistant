@@ -279,6 +279,8 @@ These must work end to end, starting from a fresh reset.
   - **About you:** preferred name, preferred spoken language, preferred way to be contacted, any hearing, vision or other sensory needs (and devices used), whether they are the main caregiver for someone (and whether arrangements are made), and whether they are in a clinical trial (and which one).
   - **Allergies:** what they're allergic to and what happens.
   - **Current medications:** a repeatable list of name, dose and how often. Remind them to bring their official medication list.
+    - **Unusual dose check:** if a dose looks like a typing mistake (for example metformin 100 g/day), ask "Are you sure about your dose of {medication} {dose}/{frequency}?" with **Yes** and **No**. It must never block saving or submitting. A Yes is saved with the answer and carried into the AI summary (Current medications bullet and Flagged items) and the consultation note, so the oncologist can verify the dose at the first visit.
+    - **Unusual dose check:** if a dose looks like a typing mistake (for example metformin 100 g/day), ask "Are you sure?" with "Yes, that's correct" and "Let me fix it". It must never block saving or submitting.
   - **Main concern and symptoms:** what brings them in, pain (where and how bad, on a 0 to 10 scale), and other symptoms (a checklist covering general, breathing/heart, stomach/bowel and bladder symptoms).
   - **Medical history:** past and current health conditions.
   - **Surgeries and procedures:** a repeatable list of what and when.
