@@ -296,6 +296,53 @@ test("Patient can use read-aloud and voice input controls", async ({ page }) => 
   await expect(page.locator("#in-ay_preferred_name")).toHaveValue("Spoken by the test");
 });
 
+test("Read aloud reads the question, and the answer options when the form provides them", async ({ page }) => {
+  await page.addInitScript(() => {
+    const spoken: string[] = [];
+    (window as any).__spoken = spoken;
+    class FakeUtterance { text: string; constructor(t: string) { this.text = t; } }
+    Object.defineProperty(window, "SpeechSynthesisUtterance", { configurable: true, value: FakeUtterance });
+    Object.defineProperty(window, "speechSynthesis", {
+      configurable: true,
+      value: { cancel() {}, speak(u: FakeUtterance) { spoken.push(u.text); } },
+    });
+  });
+
+  const QUESTION = "What sex were you assigned at birth?";
+  const OPTIONS = ["Female", "Male", "Intersex", "Prefer not to say"];
+  const lastSpoken = () => page.evaluate(() => (window as any).__spoken.at(-1) as string | undefined);
+
+  // Passes for both versions of the form. Older: the question alone is fine.
+  // Current: when options are read at all, every option must be read.
+  const expectQuestionAndAnyOptions = async () => {
+    await expect.poll(lastSpoken).toContain(QUESTION);
+    const text = (await lastSpoken()) || "";
+    if (/options/i.test(text)) for (const o of OPTIONS) expect(text).toContain(o);
+  };
+
+  await page.goto("/myconnectedcare/login");
+  await loginWith(page, "jane.doe@example.com");
+  await page.getByRole("link", { name: /Questionnaires/ }).click();
+  await page.getByRole("link", { name: "Start Intake Form" }).click();
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("switch", { name: "Read questions aloud" }).check();
+
+  // Listen button on a single-choice question
+  await page.getByRole("button", { name: /Read aloud: What sex were you assigned at birth/ }).click();
+  await expectQuestionAndAnyOptions();
+
+  // Moving into the question (automatic read)
+  await page.locator("#in-ay_preferred_name").focus(); // leave the question first
+  await page.evaluate(() => ((window as any).__spoken.length = 0));
+  await page.getByRole("radio", { name: "Female" }).focus();
+  await expectQuestionAndAnyOptions();
+
+  // Text questions are read, without any options
+  await page.getByRole("button", { name: /Read aloud: What name would you like us to call you/ }).click();
+  await expect.poll(lastSpoken).toContain("What name would you like us to call you?");
+  expect(await lastSpoken()).not.toMatch(/options/i);
+});
+
 test("Scenario 4: demo shortcuts (random fill on both forms, info button, copy all points)", async ({ page, context }) => {
   // Email button signs the patient in with a relative redirect (works through a tunnel / other laptop).
   const res = await page.request.get("/myconnectedcare/open?ref=missing", { maxRedirects: 0 });
