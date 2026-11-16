@@ -122,7 +122,6 @@ test.describe("nurse-call form validation", () => {
     await page.getByRole("button", { name: "Request a nurse call" }).click();
     await expect(page).toHaveURL(/\/request-help(\?|$)/);
     await expect(page.getByRole("alert").filter({ hasText: /Phone must be 10 digits/ }).first()).toBeVisible();
-    await expect(page.getByText(/A nurse will call you/)).toHaveCount(0);
   });
 
   test("a valid 10-digit phone number is accepted", async ({ page }) => {

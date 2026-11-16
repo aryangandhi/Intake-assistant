@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { sendIntakeEmail, SEVEN_DAYS } from "@/lib/email";
 import { approveCoopIntake, runSummary, submitIntake } from "@/lib/pipeline";
 import type { Answers } from "@/lib/answers";
+import { validateHelp, validateReferral, type FormState } from "@/lib/validation";
 
 export async function iaLogin(_: string | null, fd: FormData) {
   const err = await login("ia", String(fd.get("email") || ""), String(fd.get("password") || ""));
@@ -24,13 +25,12 @@ export async function iaLogout() {
   redirect("/intake-assistant/login");
 }
 
-export async function createReferral(_: string | null, fd: FormData) {
+export async function createReferral(_: FormState, fd: FormData): Promise<FormState> {
   await requireUser("ia", ["admin", "nurse"]);
   const get = (k: string) => String(fd.get(k) || "").trim();
-  const required = ["firstName", "lastName", "dob", "email", "phone", "appointmentAt", "providerGroup"];
-  if (required.some((k) => !get(k))) return "Please fill in every field.";
+  const errors = validateReferral(Object.fromEntries(["firstName", "lastName", "dob", "email", "phone", "appointmentAt", "providerGroup"].map((k) => [k, get(k)])));
+  if (errors.length) return { errors };
   const appt = new Date(get("appointmentAt"));
-  if (isNaN(appt.getTime())) return "Please enter a valid appointment date and time.";
   const count = await prisma.referral.count();
   const ref = await prisma.referral.create({
     data: {
@@ -88,9 +88,10 @@ export async function reviewCoopIntake(submissionId: string, answers: Answers, d
   redirect(`/intake-assistant/review?returned=${sub.referralId}`);
 }
 
-export async function submitHelpRequest(_: string | null, fd: FormData) {
+export async function submitHelpRequest(_: FormState, fd: FormData): Promise<FormState> {
   const get = (k: string) => String(fd.get(k) || "").trim();
-  if (!get("name") || !get("dob") || !get("phone")) return "Please enter your name, date of birth and phone number.";
+  const errors = validateHelp({ name: get("name"), dob: get("dob"), phone: get("phone") });
+  if (errors.length) return { errors };
   let referralId = get("ref") || null;
   if (referralId && !(await prisma.referral.findUnique({ where: { id: referralId } }))) referralId = null;
   if (!referralId) {
