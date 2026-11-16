@@ -20,3 +20,20 @@ describe("readAloudText", () => {
     expect(readAloudText(q, { includeExample: true })).toBe("Language. Example: English");
   });
 });
+
+describe("readAloudText with an answer", () => {
+  it("re-reads a text question then says what was typed", () => {
+    const q: Question = { id: "t", label: "What name would you like us to call you?", type: "text", example: "Example: Jane" };
+    expect(readAloudText(q, { includeExample: true, answer: "Jane Doe" })).toBe("What name would you like us to call you? You responded Jane Doe.");
+  });
+  it("says the selected option instead of listing all options", () => {
+    const q: Question = { id: "s", label: "What sex were you assigned at birth?", type: "single", options: ["Female", "Male"] };
+    expect(readAloudText(q, { answer: "Female" })).toBe("What sex were you assigned at birth? You responded Female.");
+  });
+  it("joins multiple selections and ignores blank answers", () => {
+    const q = { id: "m", label: "Any of these?", type: "multi", options: ["A", "B"] } as Question;
+    expect(readAloudText(q, { answer: ["A", "B"] })).toBe("Any of these? You responded A, B.");
+    expect(readAloudText(q, { answer: [] })).toContain("The options are");
+    expect(readAloudText({ id: "t", label: "Name", type: "text" }, { answer: "  " })).toBe("Name.");
+  });
+});

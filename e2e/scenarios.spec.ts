@@ -375,3 +375,36 @@ test("Scenario 4: demo shortcuts (random fill on both forms, info button, copy a
   expect(copied).toContain("Current medications\n- ");
   expect(copied).toContain("Psychosocial\n- ");
 });
+
+test("Listen reads the question, then the patient's response once it is entered or selected", async ({ page }) => {
+  await page.addInitScript(() => {
+    const spoken: string[] = [];
+    (window as any).__spoken = spoken;
+    class FakeUtterance { text: string; constructor(t: string) { this.text = t; } }
+    Object.defineProperty(window, "SpeechSynthesisUtterance", { configurable: true, value: FakeUtterance });
+    Object.defineProperty(window, "speechSynthesis", {
+      configurable: true,
+      value: { cancel() {}, speak(u: FakeUtterance) { spoken.push(u.text); } },
+    });
+  });
+  const lastSpoken = () => page.evaluate(() => (window as any).__spoken.at(-1) as string | undefined);
+
+  await page.goto("/myconnectedcare/login");
+  await loginWith(page, "jane.doe@example.com");
+  await page.getByRole("link", { name: /Questionnaires/ }).click();
+  await page.getByRole("link", { name: "Start Intake Form" }).click();
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("switch", { name: "Read questions aloud" }).check();
+
+  // Text answer
+  await page.locator("#in-ay_preferred_name").fill("Jane Doe");
+  await page.getByRole("button", { name: /Read aloud: What name would you like us to call you/ }).click();
+  await expect.poll(lastSpoken).toContain("What name would you like us to call you?");
+  await expect.poll(lastSpoken).toContain("You responded Jane Doe");
+
+  // Selected option
+  await page.getByRole("radio", { name: "Female" }).check();
+  await page.getByRole("button", { name: /Read aloud: What sex were you assigned at birth/ }).click();
+  await expect.poll(lastSpoken).toContain("What sex were you assigned at birth?");
+  await expect.poll(lastSpoken).toContain("You responded Female");
+});

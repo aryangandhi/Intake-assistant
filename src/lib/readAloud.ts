@@ -1,4 +1,5 @@
 import type { Question } from "@/config/intakeQuestions";
+import { formatAnswer, type AnswerValue } from "@/lib/answers";
 
 /** Answer options of a multiple-choice question, in the order they are shown. */
 export function spokenOptions(q: Question): string[] {
@@ -8,9 +9,17 @@ export function spokenOptions(q: Question): string[] {
   return [];
 }
 
-/** What read aloud says for a question: the label, the example (Listen button only) and every option. */
-export function readAloudText(q: Question, opts: { includeExample?: boolean } = {}): string {
+/**
+ * What read aloud says for a question: the label, the example (Listen button only) and every option.
+ * Once the question has an answer, it says the label followed by "You responded <answer>." instead of the options.
+ */
+export function readAloudText(q: Question, opts: { includeExample?: boolean; answer?: AnswerValue } = {}): string {
   const parts = [q.label.replace(/[.?!]*$/, "") + (q.label.trim().endsWith("?") ? "?" : ".")];
+  const answer = formatAnswer(q, opts.answer);
+  if (answer) {
+    parts.push(`You responded ${answer}.`);
+    return parts.join(" ");
+  }
   if (opts.includeExample && q.example) parts.push(q.example);
   const options = spokenOptions(q);
   if (options.length) parts.push(`The options are: ${options.join(", ")}.${q.type === "multi" ? " You can choose more than one." : ""}`);
