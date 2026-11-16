@@ -30,10 +30,31 @@ describe("readAloudText with an answer", () => {
     const q: Question = { id: "s", label: "What sex were you assigned at birth?", type: "single", options: ["Female", "Male"] };
     expect(readAloudText(q, { answer: "Female" })).toBe("What sex were you assigned at birth? You responded Female.");
   });
-  it("joins multiple selections and ignores blank answers", () => {
+  it("joins multiple selections with 'and' and ignores blank answers", () => {
     const q = { id: "m", label: "Any of these?", type: "multi", options: ["A", "B"] } as Question;
-    expect(readAloudText(q, { answer: ["A", "B"] })).toBe("Any of these? You responded A, B.");
+    expect(readAloudText(q, { answer: ["A", "B"] })).toBe("Any of these? You responded A and B.");
     expect(readAloudText(q, { answer: [] })).toContain("The options are");
     expect(readAloudText({ id: "t", label: "Name", type: "text" }, { answer: "  " })).toBe("Name.");
+  });
+});
+
+describe("readAloudText with an answer: edge cases", () => {
+  const name: Question = { id: "t", label: "What name would you like us to call you?", type: "text" };
+
+  it("does not double the full stop when the answer already ends in punctuation", () => {
+    expect(readAloudText(name, { answer: "Jane Jr." })).toBe("What name would you like us to call you? You responded Jane Jr.");
+  });
+  it("does not add a full stop after an answer ending in ? or !", () => {
+    expect(readAloudText(name, { answer: "Why?" })).toBe("What name would you like us to call you? You responded Why?");
+  });
+  it("collapses line breaks and repeated spaces in a long text answer", () => {
+    const q: Question = { id: "n", label: "Anything else we should know?", type: "text" };
+    expect(readAloudText(q, { answer: "Allergic to penicillin.\n\n  Also   latex" })).toBe(
+      "Anything else we should know? You responded Allergic to penicillin. Also latex.",
+    );
+  });
+  it("reads the last multiple-selection with 'and'", () => {
+    const q = { id: "m", label: "Any of these?", type: "multi", options: ["Asthma", "Diabetes", "Gout"] } as Question;
+    expect(readAloudText(q, { answer: ["Asthma", "Diabetes", "Gout"] })).toBe("Any of these? You responded Asthma, Diabetes and Gout.");
   });
 });
