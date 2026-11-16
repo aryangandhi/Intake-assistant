@@ -27,6 +27,9 @@ function browserRecognizer(): SRCtor | null {
 // Set once the browser's own recognizer fails (e.g. "network"); after that we record and transcribe on the server.
 let browserRecognizerBroken = false;
 
+/** How often the recording fallback re-transcribes what has been said so far. */
+const LIVE_CHUNK_MS = 3000;
+
 /** True when some form of voice input can work in this browser. */
 export function useSpeechRecognitionSupported() {
   const [ok, setOk] = useState(false);
@@ -104,7 +107,8 @@ function MicButton({ value, onChange, label }: { value: string; onChange: (v: st
   onChangeRef.current = onChange;
   if (!supported) return null;
 
-  // Fallback: record with the microphone, then send the audio to /api/transcribe.
+  // Fallback: record with the microphone and send the audio to /api/transcribe. While recording, the whole
+  // recording so far is re-transcribed every few seconds so the text shows up before the patient taps stop.
   const startRecording = async () => {
     let stream: MediaStream;
     try {
@@ -116,24 +120,52 @@ function MicButton({ value, onChange, label }: { value: string; onChange: (v: st
     }
     const chunks: Blob[] = [];
     const mr = new MediaRecorder(stream);
+    let seq = 0; // newest request wins; older replies that arrive late are dropped
+    let applied = 0;
+    let liveBusy = false;
+    let finishing = false;
+    const transcribe = async (): Promise<{ text?: string; error?: string; ok: boolean }> => {
+      const audio = await toWavBase64(new Blob(chunks, { type: mr.mimeType }));
+      const res = await fetch("/api/transcribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ audio }) });
+      return { ...((await res.json()) as { text?: string; error?: string }), ok: res.ok };
+    };
+    const live = async () => {
+      if (liveBusy || finishing || !chunks.length) return;
+      liveBusy = true;
+      const mine = ++seq;
+      try {
+        const data = await transcribe();
+        if (data.ok && data.text && !finishing && mine > applied) {
+          applied = mine;
+          onChangeRef.current(appendText(baseRef.current, data.text));
+        }
+      } catch {
+        // A failed live update is fine; the final transcription after stopping reports problems.
+      }
+      liveBusy = false;
+    };
+    const timer = setInterval(() => void live(), LIVE_CHUNK_MS);
     mr.ondataavailable = (e) => e.data.size && chunks.push(e.data);
     mr.onstop = async () => {
+      clearInterval(timer);
+      finishing = true;
       stream.getTracks().forEach((t) => t.stop());
       setState("transcribing");
+      const mine = ++seq;
       try {
-        const audio = await toWavBase64(new Blob(chunks, { type: mr.mimeType }));
-        const res = await fetch("/api/transcribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ audio }) });
-        const data = (await res.json()) as { text?: string; error?: string };
-        if (!res.ok) setError(data.error || "Voice typing did not work. Please type your answer.");
-        else if (data.text) onChangeRef.current(appendText(baseRef.current, data.text));
-        else setError("We didn't hear anything. Please try again.");
+        const data = await transcribe();
+        if (!data.ok) setError(data.error || "Voice typing did not work. Please type your answer.");
+        else if (data.text) {
+          applied = mine;
+          onChangeRef.current(appendText(baseRef.current, data.text));
+        } else if (!applied) setError("We didn't hear anything. Please try again.");
       } catch {
         setError("Voice typing did not work. Please type your answer.");
       }
       setState("idle");
     };
     mediaRef.current = mr;
-    mr.start();
+    mr.start(1000);
     setState("listening");
   };
 

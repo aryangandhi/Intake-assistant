@@ -27,7 +27,8 @@ test("Recorded voice is transcribed in chunks, so text appears while the patient
     }
     Object.defineProperty(window, "SpeechRecognition", { configurable: true, value: FailingRecognition });
   });
-  const replies = ["Hello", "Hello there", "Hello there my friend"];
+  // The first transcription hears only the start; later ones (including the final one after stop) hear everything.
+  const replies = ["Hello", "Hello there my friend"];
   let calls = 0;
   await page.route("**/api/transcribe", async (route) => {
     const text = replies[Math.min(calls++, replies.length - 1)];
