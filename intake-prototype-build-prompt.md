@@ -125,6 +125,7 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
   - **Read-aloud and voice input:** a toggle that reads each question aloud (Web Speech API `speechSynthesis`) and a microphone button on text fields for voice-to-text (`SpeechRecognition`, where the browser supports it).
     - Hide the microphone gracefully when it isn't supported.
     - Show a small note that patients should check voice-entered medication names, since accents can cause speech recognition errors with medication names (feedback from our community partner).
+    - **Live voice typing:** while the patient is speaking, the transcribed text appears in the answer box in real time (interim results), with the "Listening… tap to stop" indicator still shown. The text stays when they stop. Peer feedback found patients couldn't tell whether recording was working and forgot to tap the microphone again, so no text appeared.
   - **Conditional logic,** for example gynecological and pregnancy questions only when relevant, and "Name of clinical trial" only if they answered yes to being in one.
   - **Review step before submit:** list every unanswered or incomplete question with a link back to it. Patients may still submit with gaps; those fields are recorded as `incomplete` and flagged later.
   - **Completion screen:** "Thank you, your intake form has been sent to your care team." Nothing else to do.
