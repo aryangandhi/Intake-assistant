@@ -35,6 +35,7 @@ Where the brief was unclear, I chose the simplest option that keeps the demo wor
 - Required = every visible, non-optional question. Preferred name and the vitals are optional. Unanswered required questions are stored as `incompleteFields` and listed under Flagged / missing items.
 - Autosave runs about 1 second after each change. "Save and finish later" saves and returns to Questionnaires.
 - Read aloud: when the toggle is on, each question is read when you move into it, and each question gets a Listen button. The microphone uses the browser's speech recognition where it works (Chrome, Edge, Safari). In Brave, Firefox, or when that service fails, it records audio and sends it to `/api/transcribe` (OpenRouter, `TRANSCRIBE_MODEL`, needs `OPENROUTER_API_KEY`). A note reminds patients to check voice-entered medication names.
+- Read aloud also speaks the answer options for yes/no, single-choice and multiple-choice questions ("The options are: ..."), both when a question is read on entry and from the Listen button. Added after feedback that the options (for example in "What sex were you assigned at birth?") were not read. Spoken text is built in `src/lib/readAloud.ts`.
 - The patient portal uses an 18px base font and high-contrast colours.
 - The nurse / co-op PowerForm uses the same questions plus an optional "Vital signs (to be measured at visit)" section. If the patient had started the online form, the PowerForm is pre-filled with those answers. The language from a nurse-call request is pre-filled too.
 
