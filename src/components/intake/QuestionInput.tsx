@@ -192,12 +192,15 @@ export function QuestionInput({
   onChange,
   dense = false,
   voice = false,
+  checkAllMeds = false,
 }: {
   q: Question;
   value: AnswerValue;
   onChange: (v: AnswerValue) => void;
   dense?: boolean;
   voice?: boolean;
+  /** Show the unusual-dose question on every medication row now (set when the person tries to save or move on). */
+  checkAllMeds?: boolean;
 }) {
   const inputId = `in-${q.id}`;
   const base = dense
@@ -338,7 +341,7 @@ export function QuestionInput({
                       );
                     })}
                   </div>
-                  {q.id === "med_list" && checkedRows[idx] && (() => {
+                  {q.id === "med_list" && (checkAllMeds || checkedRows[idx]) && (() => {
                     const w = checkMedication(it.name || "", it.dose || "", it.frequency || "");
                     if (!w || isConfirmedUnusual(it)) return null;
                     const setRow = (patch: Record<string, string>) => set({ none: false, items: items.map((x, j) => (j === idx ? { ...x, ...patch } : x)) });

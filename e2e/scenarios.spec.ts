@@ -329,7 +329,7 @@ test("Scenario 4: demo shortcuts (random fill on both forms, info button, copy a
   expect(copied).toContain("Psychosocial\n- ");
 });
 
-test("Unusual medication dose asks \"Are you sure?\" and never blocks", async ({ page, context }) => {
+test("Unusual medication dose asks \"Are you sure?\", including when saving or moving on", async ({ page, context }) => {
   await page.goto("/inbox");
   await loginWith(page, "jane.doe@example.com");
   await page.getByRole("link", { name: /Action needed: Complete your new patient intake form/ }).click();
@@ -347,6 +347,15 @@ test("Unusual medication dose asks \"Are you sure?\" and never blocks", async ({
   await mcc.locator("#in-med_list-0-frequency").click(); // leaves the dose box
   const warning = mcc.getByTestId("med-warning");
   await expect(warning).toContainText("Are you sure about your dose of Metformin 100 g/day?");
+
+  // Leaving without answering: Save and Next both stop on the question instead.
+  await mcc.locator("#in-med_list-0-dose").fill("200 g/day");
+  await mcc.getByRole("button", { name: "Save and finish later" }).click();
+  await expect(warning).toContainText("Metformin 200 g/day");
+  await expect(mcc).toHaveURL(/questionnaires\/intake/);
+  await mcc.getByRole("button", { name: "Next →" }).click();
+  await expect(warning).toHaveCount(1);
+  await mcc.locator("#in-med_list-0-dose").fill("100 g/day");
 
   // "No" focuses the dose box; a normal dose clears the notice.
   await warning.getByRole("button", { name: "No", exact: true }).click();
