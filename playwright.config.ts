@@ -3,6 +3,8 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   timeout: 90_000,
+  // The dev server compiles each page on first visit; the default 5s assertion timeout is too short for that.
+  expect: { timeout: 20_000 },
   workers: 1,
   fullyParallel: false,
   use: { baseURL: "http://localhost:3000", trace: "off" },
