@@ -1,4 +1,4 @@
-import { CONFIRMED_MARKER, isConfirmedUnusual } from "@/lib/medicationCheck";
+import { CONFIRMED_MARKER, NAME_CONFIRMED_MARKER, NAME_WRONG_MARKER, isConfirmedUnusual, isNameConfirmed, isNameCorrected, isNameMarkedWrong, nameCorrectedMarker } from "@/lib/medicationCheck";
 import { INTAKE_SECTIONS, type Question, sectionsFor } from "@/config/intakeQuestions";
 
 export type RepeatValue = { none?: boolean; items: Record<string, string>[] };
@@ -83,7 +83,12 @@ export function formatAnswer(q: Question, value: AnswerValue): string {
           .map((f) => (it[f.id] || "").trim())
           .filter(Boolean)
           .join(", ");
-        return q.id === "med_list" && isConfirmedUnusual(it) ? `${row} ${CONFIRMED_MARKER}` : row;
+        if (q.id !== "med_list") return row;
+        const marks = [
+          isNameConfirmed(it) ? NAME_CONFIRMED_MARKER : isNameMarkedWrong(it) ? NAME_WRONG_MARKER : isNameCorrected(it) ? nameCorrectedMarker(it.nameOriginal.trim()) : "",
+          isConfirmedUnusual(it) ? CONFIRMED_MARKER : "",
+        ].filter(Boolean);
+        return [row, ...marks].join(" ");
       })
       .join("; ");
   }

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Question } from "@/config/intakeQuestions";
 import type { AnswerValue, RepeatValue } from "@/lib/answers";
-import { CONFIRM_KEY, checkMedication, confirmationQuestion, isConfirmedUnusual, medSignature } from "@/lib/medicationCheck";
+import { CONFIRM_KEY, NAME_CONFIRM_KEY, NAME_ORIGINAL_KEY, NAME_WRONG_KEY, checkMedication, checkMedicationName, confirmationQuestion, isConfirmedUnusual, isNameConfirmed, isNameMarkedWrong, medSignature, nameConfirmationQuestion } from "@/lib/medicationCheck";
 
 type SR = {
   lang: string;
@@ -209,6 +209,16 @@ export function QuestionInput({
   const showMic = voice && q.voice && !dense;
   // Medication rows to check once the person has left one of their boxes.
   const [checkedRows, setCheckedRows] = useState<Record<number, boolean>>({});
+  // Medication names the person has left (the spelling question waits until they leave the name box).
+  const [checkedNames, setCheckedNames] = useState<Record<number, boolean>>({});
+  /** Sets one box of a row. When an unusual name the person was asked about is edited, remembers what it said before. */
+  const withNameEdit = (row: Record<string, string>, idx: number, fieldId: string, value: string): Record<string, string> => {
+    const next = { ...row, [fieldId]: value };
+    if (q.id === "med_list" && fieldId === "name" && !row[NAME_ORIGINAL_KEY] && checkedNames[idx] && checkMedicationName(row.name || "")) {
+      next[NAME_ORIGINAL_KEY] = row.name;
+    }
+    return next;
+  };
 
   switch (q.type) {
     case "text":
@@ -318,10 +328,14 @@ export function QuestionInput({
                               <input
                                 id={fid}
                                 className={base}
-                                onBlur={() => q.id === "med_list" && setCheckedRows((c) => ({ ...c, [idx]: true }))}
+                                onBlur={() => {
+                                  if (q.id !== "med_list") return;
+                                  setCheckedRows((c) => ({ ...c, [idx]: true }));
+                                  if (f.id === "name") setCheckedNames((c) => ({ ...c, [idx]: true }));
+                                }}
                                 value={it[f.id] || ""}
                                 onChange={(e) => {
-                                  const next = items.map((x, j) => (j === idx ? { ...x, [f.id]: e.target.value } : x));
+                                  const next = items.map((x, j) => (j === idx ? withNameEdit(x, idx, f.id, e.target.value) : x));
                                   set({ none: false, items: next });
                                 }}
                               />
@@ -329,7 +343,7 @@ export function QuestionInput({
                                 <MicButton
                                   label={`${f.label} ${idx + 1}`}
                                   onText={(t) => {
-                                    const next = items.map((x, j) => (j === idx ? { ...x, [f.id]: appendText(x[f.id], t) } : x));
+                                    const next = items.map((x, j) => (j === idx ? withNameEdit(x, idx, f.id, appendText(x[f.id], t)) : x));
                                     set({ none: false, items: next });
                                   }}
                                 />
@@ -341,6 +355,49 @@ export function QuestionInput({
                       );
                     })}
                   </div>
+                  {q.id === "med_list" && (checkAllMeds || checkedNames[idx]) && (() => {
+                    const nw = checkMedicationName(it.name || "");
+                    if (!nw || isNameConfirmed(it) || isNameMarkedWrong(it)) return null;
+                    const nameId = idx === 0 ? inputId : `in-${q.id}-${idx}-name`;
+                    const setRow = (patch: Record<string, string>) => set({ none: false, items: items.map((x, j) => (j === idx ? { ...x, ...patch } : x)) });
+                    return (
+                      <div role="alert" data-testid="name-warning" className={`mt-2 w-full basis-full rounded-lg border-2 border-amber-600 bg-amber-50 text-gray-900 ${dense ? "p-2 text-xs" : "p-3 text-lg"}`}>
+                        <p className="font-semibold">{nameConfirmationQuestion(it)}</p>
+                        <p>{nw.message}</p>
+                        <p className="mt-1">Did you mean:</p>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {nw.suggestions.map((sg) => (
+                            <button
+                              key={sg}
+                              type="button"
+                              data-testid="name-suggestion"
+                              onClick={() => setRow({ name: sg, [NAME_ORIGINAL_KEY]: it[NAME_ORIGINAL_KEY] || it.name || "", [NAME_CONFIRM_KEY]: "", [NAME_WRONG_KEY]: "" })}
+                              className="rounded-md border-2 border-teal-700 bg-white px-3 py-1 font-semibold text-teal-800 hover:bg-teal-50"
+                            >
+                              {sg}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="mt-2">Is "{it.name}" spelt correctly?</p>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          <button type="button" data-testid="name-yes" onClick={() => setRow({ [NAME_CONFIRM_KEY]: it.name || "", [NAME_WRONG_KEY]: "" })} className="rounded-md border-2 border-teal-700 px-4 py-1 font-semibold text-teal-800 hover:bg-teal-50">
+                            Yes
+                          </button>
+                          <button
+                            type="button"
+                            data-testid="name-no"
+                            onClick={() => {
+                              setRow({ [NAME_WRONG_KEY]: it.name || "", [NAME_CONFIRM_KEY]: "" });
+                              document.getElementById(nameId)?.focus();
+                            }}
+                            className="rounded-md border-2 border-gray-500 px-4 py-1 font-semibold hover:bg-gray-100"
+                          >
+                            No
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {q.id === "med_list" && (checkAllMeds || checkedRows[idx]) && (() => {
                     const w = checkMedication(it.name || "", it.dose || "", it.frequency || "");
                     if (!w || isConfirmedUnusual(it)) return null;

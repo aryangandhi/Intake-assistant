@@ -1,5 +1,5 @@
 import type { RawItem } from "@/lib/answers";
-import { CONFIRMED_MARKER } from "@/lib/medicationCheck";
+import { CONFIRMED_MARKER, stripMarkers } from "@/lib/medicationCheck";
 import type { ModelSummary } from "./schema";
 
 /** Medication rows (without the marker) that the patient confirmed as unusual doses. */
@@ -9,7 +9,7 @@ export function confirmedDoses(items: RawItem[]): string[] {
   return med.answer
     .split("; ")
     .filter((r) => r.includes(CONFIRMED_MARKER))
-    .map((r) => r.replace(CONFIRMED_MARKER, "").trim());
+    .map((r) => stripMarkers(r));
 }
 
 /**
