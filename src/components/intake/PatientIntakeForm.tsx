@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Question, Section } from "@/config/intakeQuestions";
 import { isAnswered, isVisible, type AnswerValue, type Answers, type RepeatValue } from "@/lib/answers";
-import { checkMedication, isConfirmedUnusual, isNameUnanswered } from "@/lib/medicationCheck";
+import { isDoseUnanswered, isNameUnanswered } from "@/lib/medicationCheck";
 import { randomAnswers } from "@/lib/randomFill";
 import { InfoButton, QuestionInput, speak, useSpeechRecognitionSupported } from "./QuestionInput";
 
@@ -97,7 +97,7 @@ export function PatientIntakeForm({
   const blockOnUnconfirmedMeds = () => {
     const med = answers.med_list as RepeatValue | undefined;
     if (!med || med.none) return false;
-    if (!(med.items || []).some((it) => (checkMedication(it.name || "", it.dose || "", it.frequency || "") && !isConfirmedUnusual(it)) || isNameUnanswered(it))) return false;
+    if (!(med.items || []).some((it) => isDoseUnanswered(it) || isNameUnanswered(it))) return false;
     setCheckAllMeds(true);
     const medStep = sections.findIndex((s) => s.questions.some((q) => q.id === "med_list"));
     if (medStep >= 0) setStep(medStep);

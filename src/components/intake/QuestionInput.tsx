@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Question } from "@/config/intakeQuestions";
 import type { AnswerValue, RepeatValue } from "@/lib/answers";
-import { CONFIRM_KEY, NAME_CONFIRM_KEY, NAME_ORIGINAL_KEY, NAME_WRONG_KEY, checkMedication, checkMedicationName, confirmationQuestion, isConfirmedUnusual, isNameConfirmed, isNameMarkedWrong, medSignature, nameConfirmationQuestion } from "@/lib/medicationCheck";
+import { CONFIRM_KEY, DOSE_WRONG_KEY, NAME_CONFIRM_KEY, NAME_ORIGINAL_KEY, NAME_WRONG_KEY, checkMedication, checkMedicationName, confirmationQuestion, isConfirmedUnusual, isDoseMarkedWrong, isNameConfirmed, isNameMarkedWrong, medSignature, nameConfirmationQuestion } from "@/lib/medicationCheck";
 
 type SR = {
   lang: string;
@@ -400,20 +400,20 @@ export function QuestionInput({
                   })()}
                   {q.id === "med_list" && (checkAllMeds || checkedRows[idx]) && (() => {
                     const w = checkMedication(it.name || "", it.dose || "", it.frequency || "");
-                    if (!w || isConfirmedUnusual(it)) return null;
+                    if (!w || isConfirmedUnusual(it) || isDoseMarkedWrong(it)) return null;
                     const setRow = (patch: Record<string, string>) => set({ none: false, items: items.map((x, j) => (j === idx ? { ...x, ...patch } : x)) });
                     return (
                       <div role="alert" data-testid="med-warning" className={`mt-2 w-full basis-full rounded-lg border-2 border-amber-600 bg-amber-50 text-gray-900 ${dense ? "p-2 text-xs" : "p-3 text-lg"}`}>
                         <p className="font-semibold">{confirmationQuestion(it)}</p>
                         <p>{w.message}</p>
                         <div className="mt-2 flex flex-wrap gap-2">
-                          <button type="button" onClick={() => setRow({ [CONFIRM_KEY]: medSignature(it) })} className="rounded-md border-2 border-teal-700 px-4 py-1 font-semibold text-teal-800 hover:bg-teal-50">
+                          <button type="button" onClick={() => setRow({ [CONFIRM_KEY]: medSignature(it), [DOSE_WRONG_KEY]: "" })} className="rounded-md border-2 border-teal-700 px-4 py-1 font-semibold text-teal-800 hover:bg-teal-50">
                             Yes
                           </button>
                           <button
                             type="button"
                             onClick={() => {
-                              setRow({ [CONFIRM_KEY]: "" });
+                              setRow({ [CONFIRM_KEY]: "", [DOSE_WRONG_KEY]: medSignature(it) });
                               document.getElementById(`in-${q.id}-${idx}-dose`)?.focus();
                             }}
                             className="rounded-md border-2 border-gray-500 px-4 py-1 font-semibold hover:bg-gray-100"

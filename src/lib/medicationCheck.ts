@@ -114,6 +114,21 @@ export function isConfirmedUnusual(it: Row): boolean {
   return it[CONFIRM_KEY] === medSignature(it) && checkMedication(it.name || "", it.dose || "", it.frequency || "") !== null;
 }
 
+/** Key holding the signature of the name/dose/frequency the person said No to (dose is wrong) and left unchanged. */
+export const DOSE_WRONG_KEY = "doseWrong";
+/** Appended to a row whose unusual dose the person said was wrong but did not fix. */
+export const DOSE_WRONG_MARKER = "(patient said this dose is incorrect)";
+
+/** True when the person said No to "Are you sure?" and has not changed the row since. */
+export function isDoseMarkedWrong(it: Row): boolean {
+  return it[DOSE_WRONG_KEY] === medSignature(it) && checkMedication(it.name || "", it.dose || "", it.frequency || "") !== null;
+}
+
+/** True when the dose looks unusual and the person has not answered "Are you sure?" for it yet. */
+export function isDoseUnanswered(it: Row): boolean {
+  return checkMedication(it.name || "", it.dose || "", it.frequency || "") !== null && !isConfirmedUnusual(it) && !isDoseMarkedWrong(it);
+}
+
 /** "Are you sure about your dose of Metformin 100 g/day/once a day?" */
 export function confirmationQuestion(it: Row): string {
   const dose = [it.dose?.trim(), it.frequency?.trim()].filter(Boolean).join("/");
@@ -175,7 +190,7 @@ export const NAME_CORRECTED_PATTERN = /\(patient corrected from '([^']*)'\)/;
 
 /** Removes every "(patient …)" marker from a formatted medication row. */
 export const stripMarkers = (row: string) =>
-  row.replace(CONFIRMED_MARKER, "").replace(NAME_CONFIRMED_MARKER, "").replace(NAME_WRONG_MARKER, "").replace(NAME_CORRECTED_PATTERN, "").replace(/\s+/g, " ").trim();
+  row.replace(CONFIRMED_MARKER, "").replace(DOSE_WRONG_MARKER, "").replace(NAME_CONFIRMED_MARKER, "").replace(NAME_WRONG_MARKER, "").replace(NAME_CORRECTED_PATTERN, "").replace(/\s+/g, " ").trim();
 
 const unusualName = (it: Row) => checkMedicationName(it.name || "") !== null;
 

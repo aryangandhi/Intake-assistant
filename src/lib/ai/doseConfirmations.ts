@@ -1,5 +1,5 @@
 import type { RawItem } from "@/lib/answers";
-import { CONFIRMED_MARKER, stripMarkers } from "@/lib/medicationCheck";
+import { CONFIRMED_MARKER, DOSE_WRONG_MARKER, stripMarkers } from "@/lib/medicationCheck";
 import type { ModelSummary } from "./schema";
 
 /** Medication rows (without the marker) that the patient confirmed as unusual doses. */
@@ -12,11 +12,25 @@ export function confirmedDoses(items: RawItem[]): string[] {
     .map((r) => stripMarkers(r));
 }
 
+/** Medication rows (without the marker) whose unusual dose the patient said was wrong but did not correct. */
+export function wrongDoses(items: RawItem[]): string[] {
+  const med = items.find((i) => i.field_id === "med_list");
+  if (!med?.answer) return [];
+  return med.answer
+    .split("; ")
+    .filter((r) => r.includes(DOSE_WRONG_MARKER))
+    .map((r) => stripMarkers(r));
+}
+
 /**
  * Adds a "Current medications" bullet and a flagged item for each confirmed unusual dose.
  * Done in code (not by the model) so the oncologist always sees it.
  */
 export function applyDoseConfirmations<T extends ModelSummary>(summary: T, items: RawItem[]): T {
+  for (const d of wrongDoses(items)) {
+    const note = `Patient said this dose is incorrect but did not correct it: ${d}. Please confirm the dose at the visit.`;
+    if (!summary.flagged.some((f) => f.note === note)) summary.flagged.push({ field_id: "med_list", note });
+  }
   const doses = confirmedDoses(items);
   if (!doses.length) return summary;
   const heading = "Current medications";

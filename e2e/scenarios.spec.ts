@@ -364,6 +364,16 @@ test("Unusual medication dose asks \"Are you sure?\", including when saving or m
   await mcc.locator("#in-med_list-0-frequency").fill("twice a day");
   await expect(warning).toHaveCount(0);
 
+  // "No" without fixing the dose hides the question and still lets the form move on.
+  await mcc.locator("#in-med_list-0-dose").fill("100 g/day");
+  await mcc.locator("#in-med_list-0-frequency").click();
+  await warning.getByRole("button", { name: "No", exact: true }).click();
+  await expect(warning).toHaveCount(0);
+  await mcc.getByRole("button", { name: "Next →" }).click();
+  await expect(mcc.locator("#in-med_list")).toHaveCount(0);
+  await mcc.getByRole("button", { name: /Back/ }).first().click();
+  await expect(mcc.locator("#in-med_list")).toBeVisible();
+
   // "Yes" dismisses it, and the form still moves on. Editing the dose afterwards asks again.
   await mcc.locator("#in-med_list-0-dose").fill("100 g/day");
   await mcc.locator("#in-med_list-0-frequency").click();
