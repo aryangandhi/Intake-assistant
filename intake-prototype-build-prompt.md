@@ -77,6 +77,7 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 ### 5.1 Intake Assistant: admin side (referrals)
 
 - **Referral form** with these fields: first name, last name, date of birth, email, phone, first appointment date, provider group.
+  - **Field validation:** fields that need a specific format or length are validated on submit: phone must be exactly 10 digits, email must be a valid address, date of birth cannot be in the future. Submission is blocked until the errors are fixed. An error summary at the top of the form lists each missing or incorrect field (clicking an entry focuses that field), and each field shows an inline message (e.g. "Phone must be 10 digits"). Checked in the browser and again on the server. Without this, a wrong phone number was saved silently and nobody was told.
 - **Email scheduling:** on save, the system schedules the intake email for 7 days before the appointment.
   - Show the scheduled send date in the referral list.
   - Because we can't wait a week during a demo, add a **"Send intake email now (demo)"** button.
@@ -134,6 +135,7 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 
 - **Fields:** name, date of birth, phone number, preferred language, best time to call, optional note. Pre-fill these when opened from inside the portal.
 - **After submitting:** "Thanks. A nurse will call you 1 to 2 days before your appointment on {date} to complete your intake over the phone."
+- **Field validation:** same rules and error display as the referral form (5.1): name, date of birth and a 10-digit phone number are required, and the request cannot be sent until errors are fixed.
 - **Effect:** creates a **notification** in the nurse inbox in Intake Assistant.
 
 ### 5.5 Intake Assistant: nurse side
