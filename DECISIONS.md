@@ -27,6 +27,7 @@ Where the brief was unclear, I chose the simplest option that keeps the demo wor
 - Links in the email open in a new tab, like real webmail.
 - "Request a nurse call" in the email includes the referral id, so the help form is pre-filled. Without it, the form matches a referral by date of birth and last name.
 - Emails are scheduled for 7 days before the appointment. There is no background job; the referral list shows the scheduled date and has **Send intake email now (demo)**. Referrals with an appointment 7 days away or less are sent on save.
+- Form validation (referral form and nurse-call form): phone must be exactly 10 digits. Spaces, dashes and parentheses are allowed and stripped before counting; a leading country code is not accepted. Errors appear in a summary at the top that focuses the bad field, plus inline messages, and submit is blocked until fixed. The server re-validates.
 
 ## Intake form
 - 10 patient sections, about 25 visible questions (more appear through conditional logic). Wording is a draft, marked "pending Health Sciences review" in the config file.
@@ -35,6 +36,8 @@ Where the brief was unclear, I chose the simplest option that keeps the demo wor
 - Required = every visible, non-optional question. Preferred name and the vitals are optional. Unanswered required questions are stored as `incompleteFields` and listed under Flagged / missing items.
 - Autosave runs about 1 second after each change. "Save and finish later" saves and returns to Questionnaires.
 - Read aloud: when the toggle is on, each question is read when you move into it, and each question gets a Listen button. The microphone uses the browser's speech recognition where it works (Chrome, Edge, Safari). In Brave, Firefox, or when that service fails, it records audio and sends it to `/api/transcribe` (OpenRouter, `TRANSCRIBE_MODEL`, needs `OPENROUTER_API_KEY`). A note reminds patients to check voice-entered medication names.
+- Read aloud also speaks the answer options for yes/no, single-choice and multiple-choice questions ("The options are: ..."), both when a question is read on entry and from the Listen button. Added after feedback that the options (for example in "What sex were you assigned at birth?") were not read. Spoken text is built in `src/lib/readAloud.ts`.
+- Read aloud also reads back the response. When a question already has an answer, Listen (and the read on entering the question) says the question followed by "You responded <answer>." and skips the options list. Added so patients who cannot read their own entries can verify them. Answers are formatted with `formatAnswer` in `src/lib/answers.ts`.
 - The patient portal uses an 18px base font and high-contrast colours.
 - The nurse / co-op PowerForm uses the same questions plus an optional "Vital signs (to be measured at visit)" section. If the patient had started the online form, the PowerForm is pre-filled with those answers. The language from a nurse-call request is pre-filled too.
 

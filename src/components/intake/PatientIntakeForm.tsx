@@ -6,6 +6,7 @@ import type { Question, Section } from "@/config/intakeQuestions";
 import { isAnswered, isVisible, type AnswerValue, type Answers, type RepeatValue } from "@/lib/answers";
 import { isDoseUnanswered, isNameUnanswered } from "@/lib/medicationCheck";
 import { randomAnswers } from "@/lib/randomFill";
+import { readAloudText } from "@/lib/readAloud";
 import { InfoButton, QuestionInput, speak, useSpeechRecognitionSupported } from "./QuestionInput";
 
 export function PatientIntakeForm({
@@ -226,7 +227,7 @@ export function PatientIntakeForm({
                     key={q.id}
                     id={`q-${q.id}`}
                     onFocus={(e) => {
-                      if (readAloud && !e.currentTarget.contains(e.relatedTarget as Node)) speak(q.label);
+                      if (readAloud && !e.currentTarget.contains(e.relatedTarget as Node)) speak(readAloudText(q, { answer: answers[q.id] }));
                     }}
                   >
                     <div className="mb-2 flex items-start justify-between gap-2">
@@ -236,7 +237,7 @@ export function PatientIntakeForm({
                         <InfoButton q={q} onOpen={(t) => readAloud && speak(t)} />
                       </label>
                       {readAloud && (
-                        <button type="button" onClick={() => speak(`${q.label}. ${q.example || ""}`)} className="shrink-0 rounded-md border border-gray-400 px-2 py-1 text-base" aria-label={`Read aloud: ${q.label}`}>
+                        <button type="button" onClick={() => speak(readAloudText(q, { includeExample: true, answer: answers[q.id] }))} className="shrink-0 rounded-md border border-gray-400 px-2 py-1 text-base" aria-label={`Read aloud: ${q.label}`}>
                           🔊 Listen
                         </button>
                       )}

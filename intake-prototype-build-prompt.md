@@ -77,6 +77,7 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 ### 5.1 Intake Assistant: admin side (referrals)
 
 - **Referral form** with these fields: first name, last name, date of birth, email, phone, first appointment date, provider group.
+  - **Field validation:** fields that need a specific format or length are validated on submit: phone must be exactly 10 digits, email must be a valid address, date of birth cannot be in the future. Submission is blocked until the errors are fixed. An error summary at the top of the form lists each missing or incorrect field (clicking an entry focuses that field), and each field shows an inline message (e.g. "Phone must be 10 digits"). Checked in the browser and again on the server. Without this, a wrong phone number was saved silently and nobody was told.
 - **Email scheduling:** on save, the system schedules the intake email for 7 days before the appointment.
   - Show the scheduled send date in the referral list.
   - Because we can't wait a week during a demo, add a **"Send intake email now (demo)"** button.
@@ -125,6 +126,8 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
   - **Read-aloud and voice input:** a toggle that reads each question aloud (Web Speech API `speechSynthesis`) and a microphone button on text fields for voice-to-text (`SpeechRecognition`, where the browser supports it).
     - Hide the microphone gracefully when it isn't supported.
     - Show a small note that patients should check voice-entered medication names, since accents can cause speech recognition errors with medication names (feedback from our community partner).
+    - For multiple-choice questions (yes/no, single choice, multiple choice), reading a question aloud, whether automatically or with its **Listen** button, also reads every answer option after the question, for example: "What sex were you assigned at birth? The options are: Female, Male, Intersex, Prefer not to say." Multiple-choice questions with grouped options read the options in the order shown. Peer feedback found that reading only the question left patients unaware of their choices.
+    - Read aloud also reads back the patient's response. Once a question has an answer, its **Listen** button (and the read on entering the question) says the question and then "You responded <answer>." (for example, "What name would you like us to call you? You responded Jane Doe."). Multiple selections are read as "A, B and C". Answers are read as one line, without doubling end punctuation. Unanswered questions behave as before. Peer feedback found that patients who rely on read aloud could not hear what they had entered.
   - **Conditional logic,** for example gynecological and pregnancy questions only when relevant, and "Name of clinical trial" only if they answered yes to being in one.
   - **Review step before submit:** list every unanswered or incomplete question with a link back to it. Patients may still submit with gaps; those fields are recorded as `incomplete` and flagged later.
   - **Completion screen:** "Thank you, your intake form has been sent to your care team." Nothing else to do.
@@ -134,6 +137,7 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 
 - **Fields:** name, date of birth, phone number, preferred language, best time to call, optional note. Pre-fill these when opened from inside the portal.
 - **After submitting:** "Thanks. A nurse will call you 1 to 2 days before your appointment on {date} to complete your intake over the phone."
+- **Field validation:** same rules and error display as the referral form (5.1): name, date of birth and a 10-digit phone number are required, and the request cannot be sent until errors are fixed.
 - **Effect:** creates a **notification** in the nurse inbox in Intake Assistant.
 
 ### 5.5 Intake Assistant: nurse side

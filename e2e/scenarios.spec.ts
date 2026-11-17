@@ -148,7 +148,7 @@ test("Scenario 2: patient requests a nurse call, nurse completes the PowerForm",
 });
 
 test("Scenario 3: co-op student completes the intake, nurse approves, EMR shows raw data only", async ({ browser }) => {
-  const coopCtx = await browser.newContext({ baseURL: "http://localhost:3000" });
+  const coopCtx = await browser.newContext({ baseURL: test.info().project.use.baseURL });
   const coop = await coopCtx.newPage();
   await coop.goto("/intake-assistant");
   await loginWith(coop, "coop@wrhn-demo.ca");
@@ -160,7 +160,7 @@ test("Scenario 3: co-op student completes the intake, nurse approves, EMR shows 
   await coop.getByRole("button", { name: "Submit for nurse review" }).click();
   await expect(coop.getByText(/sent to the nurse review queue/)).toBeVisible();
 
-  const nurseCtx = await browser.newContext({ baseURL: "http://localhost:3000" });
+  const nurseCtx = await browser.newContext({ baseURL: test.info().project.use.baseURL });
   const nurse = await nurseCtx.newPage();
   await nurse.goto("/intake-assistant");
   await loginWith(nurse, "nurse@wrhn-demo.ca");
@@ -294,6 +294,53 @@ test("Patient can use read-aloud and voice input controls", async ({ page }) => 
   await expect(mic).toBeVisible();
   await mic.click();
   await expect(page.locator("#in-ay_preferred_name")).toHaveValue("Spoken by the test");
+});
+
+test("Read aloud reads the question, and the answer options when the form provides them", async ({ page }) => {
+  await page.addInitScript(() => {
+    const spoken: string[] = [];
+    (window as any).__spoken = spoken;
+    class FakeUtterance { text: string; constructor(t: string) { this.text = t; } }
+    Object.defineProperty(window, "SpeechSynthesisUtterance", { configurable: true, value: FakeUtterance });
+    Object.defineProperty(window, "speechSynthesis", {
+      configurable: true,
+      value: { cancel() {}, speak(u: FakeUtterance) { spoken.push(u.text); } },
+    });
+  });
+
+  const QUESTION = "What sex were you assigned at birth?";
+  const OPTIONS = ["Female", "Male", "Intersex", "Prefer not to say"];
+  const lastSpoken = () => page.evaluate(() => (window as any).__spoken.at(-1) as string | undefined);
+
+  // Passes for both versions of the form. Older: the question alone is fine.
+  // Current: when options are read at all, every option must be read.
+  const expectQuestionAndAnyOptions = async () => {
+    await expect.poll(lastSpoken).toContain(QUESTION);
+    const text = (await lastSpoken()) || "";
+    if (/options/i.test(text)) for (const o of OPTIONS) expect(text).toContain(o);
+  };
+
+  await page.goto("/myconnectedcare/login");
+  await loginWith(page, "jane.doe@example.com");
+  await page.getByRole("link", { name: /Questionnaires/ }).click();
+  await page.getByRole("link", { name: "Start Intake Form" }).click();
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("switch", { name: "Read questions aloud" }).check();
+
+  // Listen button on a single-choice question
+  await page.getByRole("button", { name: /Read aloud: What sex were you assigned at birth/ }).click();
+  await expectQuestionAndAnyOptions();
+
+  // Moving into the question (automatic read)
+  await page.locator("#in-ay_preferred_name").focus(); // leave the question first
+  await page.evaluate(() => ((window as any).__spoken.length = 0));
+  await page.getByRole("radio", { name: "Female" }).focus();
+  await expectQuestionAndAnyOptions();
+
+  // Text questions are read, without any options
+  await page.getByRole("button", { name: /Read aloud: What name would you like us to call you/ }).click();
+  await expect.poll(lastSpoken).toContain("What name would you like us to call you?");
+  expect(await lastSpoken()).not.toMatch(/options/i);
 });
 
 test("Scenario 4: demo shortcuts (random fill on both forms, info button, copy all points)", async ({ page, context }) => {
@@ -523,4 +570,37 @@ test("Spelling outcome (corrected, kept as typed) reaches the oncologist's summa
 
   await emr.getByRole("button", { name: "Copy to clinic note" }).click();
   await expect(emr.locator("#currentMedications")).toHaveValue(/corrected "meform" to "Metformin".*Please check against their medication list/s);
+});
+
+test("Listen reads the question, then the patient's response once it is entered or selected", async ({ page }) => {
+  await page.addInitScript(() => {
+    const spoken: string[] = [];
+    (window as any).__spoken = spoken;
+    class FakeUtterance { text: string; constructor(t: string) { this.text = t; } }
+    Object.defineProperty(window, "SpeechSynthesisUtterance", { configurable: true, value: FakeUtterance });
+    Object.defineProperty(window, "speechSynthesis", {
+      configurable: true,
+      value: { cancel() {}, speak(u: FakeUtterance) { spoken.push(u.text); } },
+    });
+  });
+  const lastSpoken = () => page.evaluate(() => (window as any).__spoken.at(-1) as string | undefined);
+
+  await page.goto("/myconnectedcare/login");
+  await loginWith(page, "jane.doe@example.com");
+  await page.getByRole("link", { name: /Questionnaires/ }).click();
+  await page.getByRole("link", { name: "Start Intake Form" }).click();
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("switch", { name: "Read questions aloud" }).check();
+
+  // Text answer
+  await page.locator("#in-ay_preferred_name").fill("Jane Doe");
+  await page.getByRole("button", { name: /Read aloud: What name would you like us to call you/ }).click();
+  await expect.poll(lastSpoken).toContain("What name would you like us to call you?");
+  await expect.poll(lastSpoken).toContain("You responded Jane Doe");
+
+  // Selected option
+  await page.getByRole("radio", { name: "Female" }).check();
+  await page.getByRole("button", { name: /Read aloud: What sex were you assigned at birth/ }).click();
+  await expect.poll(lastSpoken).toContain("What sex were you assigned at birth?");
+  await expect.poll(lastSpoken).toContain("You responded Female");
 });
