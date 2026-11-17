@@ -59,6 +59,7 @@ To give each tester a fresh patient, have the admin enter a new referral (appoin
 4. Click **Questionnaires** on the left, then **Start Intake Form**.
 5. Answer questions step by step (optional: Read questions aloud, microphone). Click **Next** through the steps.
    - (Optional) In Current medications, type Metformin, 100 g, once a day: "Are you sure about your dose of Metformin 100 g/once a day?" appears. Click **No** and correct the dose, or **Yes** to keep it (the oncologist will then see it flagged in the summary).
+   - (Optional) In Current medications, type "meform" as the name: "Are you sure about the medication's spelling?" appears with the suggestion **Metformin**. Click the suggestion or **No** to fix it, or **Yes** to keep it as typed. Either way, the oncologist sees the name flagged in the summary (EMR step below), and the form reminds you to bring your medication list.
 6. Review step lists unanswered questions; click **Send to my care team**.
 7. Sees "Thank you, your intake form has been sent to your care team."
 8. EMR (Card 4): log in, click **Doe, Jane**, open **Oncology New Patient Intake**.
