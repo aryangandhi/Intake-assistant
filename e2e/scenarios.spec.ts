@@ -412,7 +412,7 @@ test("Unusual medication dose asks \"Are you sure?\", including when saving or m
   await expect(warning).toHaveCount(0);
 
   // "No" without fixing the dose hides the question and still lets the form move on.
-  await mcc.locator("#in-med_list-0-dose").fill("100 g/day");
+  await mcc.locator("#in-med_list-0-dose").fill("300 g/day");
   await mcc.locator("#in-med_list-0-frequency").click();
   await warning.getByRole("button", { name: "No", exact: true }).click();
   await expect(warning).toHaveCount(0);
