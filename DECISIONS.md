@@ -27,6 +27,7 @@ Where the brief was unclear, I chose the simplest option that keeps the demo wor
 - Links in the email open in a new tab, like real webmail.
 - "Request a nurse call" in the email includes the referral id, so the help form is pre-filled. Without it, the form matches a referral by date of birth and last name.
 - Emails are scheduled for 7 days before the appointment. There is no background job; the referral list shows the scheduled date and has **Send intake email now (demo)**. Referrals with an appointment 7 days away or less are sent on save.
+- Form validation (referral form and nurse-call form): phone must be exactly 10 digits. Spaces, dashes and parentheses are allowed and stripped before counting; a leading country code is not accepted. Errors appear in a summary at the top that focuses the bad field, plus inline messages, and submit is blocked until fixed. The server re-validates.
 
 ## Intake form
 - 10 patient sections, about 25 visible questions (more appear through conditional logic). Wording is a draft, marked "pending Health Sciences review" in the config file.
