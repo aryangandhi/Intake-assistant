@@ -9,7 +9,14 @@ export function ReferralForm() {
   const field = (id: string, label: string, type = "text") => (
     <div>
       <label htmlFor={id} className="block text-sm font-medium text-slate-700">{label}</label>
-      <input id={id} name={id} type={type} required className="mt-1 w-full rounded-md border border-slate-400 px-3 py-2" />
+      <input
+        id={id}
+        name={id}
+        type={type}
+        required
+        {...(id === "phone" ? { pattern: "\\+?[0-9\\s\\(\\)\\.\\-]{10,}", title: "Enter a valid phone number, e.g. 416-555-0123" } : {})}
+        className="mt-1 w-full rounded-md border border-slate-400 px-3 py-2"
+      />
     </div>
   );
   return (
