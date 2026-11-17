@@ -3,8 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Question, Section } from "@/config/intakeQuestions";
-import { isAnswered, isVisible, type AnswerValue, type Answers } from "@/lib/answers";
+import { isAnswered, isVisible, type AnswerValue, type Answers, type RepeatValue } from "@/lib/answers";
+import { isDoseUnanswered, isNameUnanswered } from "@/lib/medicationCheck";
 import { randomAnswers } from "@/lib/randomFill";
+import { readAloudText } from "@/lib/readAloud";
 import { InfoButton, QuestionInput, speak, useSpeechRecognitionSupported } from "./QuestionInput";
 
 export function PatientIntakeForm({
@@ -27,6 +29,8 @@ export function PatientIntakeForm({
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [submitting, startSubmit] = useTransition();
   const [focusTarget, setFocusTarget] = useState<string | null>(null);
+  // Set once the person tries to save or move on with an unusual dose they have not confirmed.
+  const [checkAllMeds, setCheckAllMeds] = useState(false);
   const dirty = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const micSupported = useSpeechRecognitionSupported();
@@ -90,12 +94,26 @@ export function PatientIntakeForm({
     return out;
   }, [answers, sections]);
 
+  /** True (and shows the "Are you sure?" question) when a medication row looks unusual and is not yet confirmed. */
+  const blockOnUnconfirmedMeds = () => {
+    const med = answers.med_list as RepeatValue | undefined;
+    if (!med || med.none) return false;
+    if (!(med.items || []).some((it) => isDoseUnanswered(it) || isNameUnanswered(it))) return false;
+    setCheckAllMeds(true);
+    const medStep = sections.findIndex((s) => s.questions.some((q) => q.id === "med_list"));
+    if (medStep >= 0) setStep(medStep);
+    setTimeout(() => document.getElementById("q-med_list")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+    return true;
+  };
+
   const go = (n: number) => {
+    if (n > step && blockOnUnconfirmedMeds()) return;
     if (dirty.current) doSave(answers);
     setStep(n);
   };
 
   const saveAndLeave = async () => {
+    if (blockOnUnconfirmedMeds()) return;
     await doSave(answers);
     router.push("/myconnectedcare/questionnaires?saved=1");
   };
@@ -209,7 +227,7 @@ export function PatientIntakeForm({
                     key={q.id}
                     id={`q-${q.id}`}
                     onFocus={(e) => {
-                      if (readAloud && !e.currentTarget.contains(e.relatedTarget as Node)) speak(q.label);
+                      if (readAloud && !e.currentTarget.contains(e.relatedTarget as Node)) speak(readAloudText(q, { answer: answers[q.id] }));
                     }}
                   >
                     <div className="mb-2 flex items-start justify-between gap-2">
@@ -219,13 +237,13 @@ export function PatientIntakeForm({
                         <InfoButton q={q} onOpen={(t) => readAloud && speak(t)} />
                       </label>
                       {readAloud && (
-                        <button type="button" onClick={() => speak(`${q.label}. ${q.example || ""}`)} className="shrink-0 rounded-md border border-gray-400 px-2 py-1 text-base" aria-label={`Read aloud: ${q.label}`}>
+                        <button type="button" onClick={() => speak(readAloudText(q, { includeExample: true, answer: answers[q.id] }))} className="shrink-0 rounded-md border border-gray-400 px-2 py-1 text-base" aria-label={`Read aloud: ${q.label}`}>
                           🔊 Listen
                         </button>
                       )}
                     </div>
                     {q.example && q.type !== "repeat" && <p className="mb-2 text-base italic text-gray-700">{q.example}</p>}
-                    <QuestionInput q={q} value={answers[q.id]} onChange={(v) => setAnswer(q.id, v)} voice />
+                    <QuestionInput q={q} value={answers[q.id]} onChange={(v) => setAnswer(q.id, v)} voice checkAllMeds={checkAllMeds} />
                     {q.help && <p className="mt-2 text-base text-gray-800">{q.help}</p>}
                   </div>
                 ))}
@@ -287,6 +305,7 @@ export function PatientIntakeForm({
               disabled={submitting}
               onClick={() =>
                 startSubmit(async () => {
+                  if (blockOnUnconfirmedMeds()) return;
                   if (timer.current) clearTimeout(timer.current);
                   await submit(answers);
                 })
