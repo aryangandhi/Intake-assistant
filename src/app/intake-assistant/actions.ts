@@ -29,8 +29,6 @@ export async function createReferral(_: string | null, fd: FormData) {
   const get = (k: string) => String(fd.get(k) || "").trim();
   const required = ["firstName", "lastName", "dob", "email", "phone", "appointmentAt", "providerGroup"];
   if (required.some((k) => !get(k))) return "Please fill in every field.";
-  if (!/^\+?[\d\s().-]+$/.test(get("phone")) || ![10, 11].includes(get("phone").replace(/\D/g, "").length))
-    return "Please enter a valid phone number (10 digits, e.g. 416-555-0123).";
   const appt = new Date(get("appointmentAt"));
   if (isNaN(appt.getTime())) return "Please enter a valid appointment date and time.";
   const count = await prisma.referral.count();
