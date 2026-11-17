@@ -148,7 +148,7 @@ test("Scenario 2: patient requests a nurse call, nurse completes the PowerForm",
 });
 
 test("Scenario 3: co-op student completes the intake, nurse approves, EMR shows raw data only", async ({ browser }) => {
-  const coopCtx = await browser.newContext({ baseURL: "http://localhost:3000" });
+  const coopCtx = await browser.newContext({ baseURL: test.info().project.use.baseURL });
   const coop = await coopCtx.newPage();
   await coop.goto("/intake-assistant");
   await loginWith(coop, "coop@wrhn-demo.ca");
@@ -160,7 +160,7 @@ test("Scenario 3: co-op student completes the intake, nurse approves, EMR shows 
   await coop.getByRole("button", { name: "Submit for nurse review" }).click();
   await expect(coop.getByText(/sent to the nurse review queue/)).toBeVisible();
 
-  const nurseCtx = await browser.newContext({ baseURL: "http://localhost:3000" });
+  const nurseCtx = await browser.newContext({ baseURL: test.info().project.use.baseURL });
   const nurse = await nurseCtx.newPage();
   await nurse.goto("/intake-assistant");
   await loginWith(nurse, "nurse@wrhn-demo.ca");
