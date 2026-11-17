@@ -376,6 +376,202 @@ test("Scenario 4: demo shortcuts (random fill on both forms, info button, copy a
   expect(copied).toContain("Psychosocial\n- ");
 });
 
+test("Unusual medication dose asks \"Are you sure?\", including when saving or moving on", async ({ page, context }) => {
+  await page.goto("/inbox");
+  await loginWith(page, "jane.doe@example.com");
+  await page.getByRole("link", { name: /Action needed: Complete your new patient intake form/ }).click();
+  const mcc = await openFromEmail(context, page, /Open MyConnectedCare/);
+  await mcc.getByRole("link", { name: /Questionnaires/ }).click();
+  await mcc.getByRole("link", { name: "Start Intake Form" }).click();
+  await mcc.waitForLoadState("networkidle");
+
+  // Jump to the medications step by going Next until its field exists.
+  for (let i = 0; i < 10 && !(await mcc.locator("#in-med_list").count()); i++) {
+    await mcc.getByRole("button", { name: "Next →" }).click();
+  }
+  await mcc.locator("#in-med_list").fill("Metformin");
+  await mcc.locator("#in-med_list-0-dose").fill("100 g/day");
+  await mcc.locator("#in-med_list-0-frequency").click(); // leaves the dose box
+  const warning = mcc.getByTestId("med-warning");
+  await expect(warning).toContainText("Are you sure about your dose of Metformin 100 g/day?");
+
+  // Leaving without answering: Save and Next both stop on the question instead.
+  await mcc.locator("#in-med_list-0-dose").fill("200 g/day");
+  await mcc.getByRole("button", { name: "Save and finish later" }).click();
+  await expect(warning).toContainText("Metformin 200 g/day");
+  await expect(mcc).toHaveURL(/questionnaires\/intake/);
+  await mcc.getByRole("button", { name: "Next →" }).click();
+  await expect(warning).toHaveCount(1);
+  await mcc.locator("#in-med_list-0-dose").fill("100 g/day");
+
+  // "No" focuses the dose box; a normal dose clears the notice.
+  await warning.getByRole("button", { name: "No", exact: true }).click();
+  await expect(mcc.locator("#in-med_list-0-dose")).toBeFocused();
+  await mcc.locator("#in-med_list-0-dose").fill("500 mg");
+  await mcc.locator("#in-med_list-0-frequency").fill("twice a day");
+  await expect(warning).toHaveCount(0);
+
+  // "No" without fixing the dose hides the question and still lets the form move on.
+  await mcc.locator("#in-med_list-0-dose").fill("300 g/day");
+  await mcc.locator("#in-med_list-0-frequency").click();
+  await warning.getByRole("button", { name: "No", exact: true }).click();
+  await expect(warning).toHaveCount(0);
+  await mcc.getByRole("button", { name: "Next →" }).click();
+  await expect(mcc.locator("#in-med_list")).toHaveCount(0);
+  await mcc.getByRole("button", { name: /Back/ }).first().click();
+  await expect(mcc.locator("#in-med_list")).toBeVisible();
+
+  // "Yes" dismisses it, and the form still moves on. Editing the dose afterwards asks again.
+  await mcc.locator("#in-med_list-0-dose").fill("100 g/day");
+  await mcc.locator("#in-med_list-0-frequency").click();
+  await mcc.getByRole("button", { name: "Yes", exact: true }).click();
+  await expect(warning).toHaveCount(0);
+  await mcc.locator("#in-med_list-0-dose").fill("200 g/day");
+  await mcc.locator("#in-med_list-0-frequency").click();
+  await expect(warning).toContainText("Metformin 200 g/day");
+  await mcc.getByRole("button", { name: "Yes", exact: true }).click();
+  await mcc.getByRole("button", { name: "Next →" }).click();
+});
+
+test("Confirmed unusual dose reaches the oncologist's summary, flags and clinic note", async ({ page, context }) => {
+  await page.goto("/inbox");
+  await loginWith(page, "jane.doe@example.com");
+  await page.getByRole("link", { name: /Action needed: Complete your new patient intake form/ }).click();
+  const mcc = await openFromEmail(context, page, /Open MyConnectedCare/);
+  await mcc.getByRole("link", { name: /Questionnaires/ }).click();
+  await mcc.getByRole("link", { name: "Start Intake Form" }).click();
+  await mcc.waitForLoadState("networkidle");
+  for (let i = 0; i < 10 && !(await mcc.locator("#in-med_list").count()); i++) {
+    await mcc.getByRole("button", { name: "Next →" }).click();
+  }
+
+  // Two medications: one normal, one unusual that the patient confirms with Yes.
+  await mcc.locator("#in-med_list").fill("Ramipril");
+  await mcc.locator("#in-med_list-0-dose").fill("10 mg");
+  await mcc.locator("#in-med_list-0-frequency").fill("once a day");
+  await mcc.getByRole("button", { name: "+ Add another" }).click();
+  await mcc.locator("#in-med_list-1-name").fill("Metformin");
+  await mcc.locator("#in-med_list-1-dose").fill("100 g/day");
+  await mcc.locator("#in-med_list-1-frequency").fill("once a day");
+  await mcc.locator("#in-med_list-1-frequency").blur();
+  await expect(mcc.getByTestId("med-warning")).toHaveCount(1);
+  await expect(mcc.getByTestId("med-warning")).toContainText("Are you sure about your dose of Metformin 100 g/day/once a day?");
+  await mcc.getByRole("button", { name: "Yes", exact: true }).click();
+  await expect(mcc.getByTestId("med-warning")).toHaveCount(0);
+
+  // Walk to the review step and submit (gaps are allowed).
+  for (let i = 0; i < 15 && !(await mcc.getByRole("button", { name: "Send to my care team" }).count()); i++) {
+    await mcc.getByRole("button", { name: "Next →" }).click();
+  }
+  await mcc.getByRole("button", { name: "Send to my care team" }).click();
+  await expect(mcc.getByRole("heading", { name: "Thank you, your intake form has been sent to your care team." })).toBeVisible();
+
+  // Oncologist: raw data tag, summary bullet, flagged item, then the clinic note.
+  const emr = await context.newPage();
+  await oncologistOpensLatestIntake(emr, "Doe, Jane");
+  await expect(emr.getByText("AI Summary (paragraph)")).toBeVisible({ timeout: 30_000 });
+  await expect(emr.locator("#raw-med_list")).toContainText("Metformin, 100 g/day, once a day (patient confirmed this unusual dose)");
+  await expect(emr.locator("#raw-med_list")).toContainText("Ramipril, 10 mg, once a day");
+  await expect(emr.locator("#raw-med_list")).not.toContainText("Ramipril, 10 mg, once a day (patient confirmed");
+  await expect(emr.getByText(/Patient confirmed this dose as correct when asked "Are you sure\?": Metformin, 100 g\/day, once a day/).first()).toBeVisible();
+  await expect(emr.getByRole("button", { name: /Unusual dose confirmed by patient: Metformin/ })).toBeVisible();
+
+  await emr.getByRole("button", { name: "Copy to clinic note" }).click();
+  await expect(emr.locator("#currentMedications")).toHaveValue(/Metformin, 100 g\/day, once a day.*Please verify/s);
+});
+
+const SHOTS = process.env.SHOTS_DIR || "test-results/shots";
+
+async function openMedicationsStep(page: Page, context: BrowserContext) {
+  await page.goto("/inbox");
+  await loginWith(page, "jane.doe@example.com");
+  await page.getByRole("link", { name: /Action needed: Complete your new patient intake form/ }).click();
+  const mcc = await openFromEmail(context, page, /Open MyConnectedCare/);
+  await mcc.getByRole("link", { name: /Questionnaires/ }).click();
+  await mcc.getByRole("link", { name: "Start Intake Form" }).click();
+  await mcc.waitForLoadState("networkidle");
+  for (let i = 0; i < 10 && !(await mcc.locator("#in-med_list").count()); i++) {
+    await mcc.getByRole("button", { name: "Next →" }).click();
+  }
+  return mcc;
+}
+
+test("Unusual medication name asks about the spelling, with suggestions, and pauses until answered", async ({ page, context }) => {
+  const mcc = await openMedicationsStep(page, context);
+  await mcc.locator("#in-med_list").fill("meform");
+  await expect(mcc.getByTestId("name-warning")).toHaveCount(0); // waits until they leave the name box
+  await mcc.locator("#in-med_list-0-dose").fill("500 mg");
+  const warning = mcc.getByTestId("name-warning");
+  await expect(warning).toContainText("Are you sure about the medication's spelling?");
+  await expect(warning.getByTestId("name-suggestion").first()).toHaveText("Metformin");
+  await mcc.locator("#q-med_list").screenshot({ path: `${SHOTS}/1-spelling-question.png` });
+
+  // Next and Save pause on the question.
+  await mcc.getByRole("button", { name: "Next →" }).click();
+  await expect(warning).toHaveCount(1);
+  await mcc.getByRole("button", { name: "Save and finish later" }).click();
+  await expect(mcc).toHaveURL(/questionnaires\/intake/);
+
+  // No: focus returns to the name box; Yes after editing again; a known name has no question.
+  await warning.getByTestId("name-no").click();
+  await expect(mcc.locator("#in-med_list")).toBeFocused();
+  await expect(warning).toHaveCount(0);
+  await mcc.locator("#in-med_list").fill("Metformin");
+  await mcc.locator("#in-med_list-0-dose").click();
+  await expect(warning).toHaveCount(0);
+  await mcc.locator("#in-med_list").fill("Zzyxo");
+  await mcc.locator("#in-med_list-0-dose").click();
+  await expect(warning).toHaveCount(0); // far from any known name: not flagged
+  await mcc.locator("#in-med_list").fill("metformine");
+  await mcc.locator("#in-med_list-0-dose").click();
+  await warning.getByTestId("name-yes").click();
+  await expect(warning).toHaveCount(0);
+  await mcc.locator("#in-med_list").fill("metformines"); // editing after Yes asks again
+  await mcc.locator("#in-med_list-0-dose").click();
+  await expect(warning).toHaveCount(1);
+  await warning.getByTestId("name-suggestion").first().click();
+  await expect(mcc.locator("#in-med_list")).toHaveValue("Metformin");
+  await expect(warning).toHaveCount(0);
+  await mcc.getByRole("button", { name: "Next →" }).click(); // moves on
+});
+
+test("Spelling outcome (corrected, kept as typed) reaches the oncologist's summary, flags and clinic note", async ({ page, context }) => {
+  const mcc = await openMedicationsStep(page, context);
+
+  // Row 1: typo fixed by clicking the suggestion. Row 2: unusual spelling kept with Yes.
+  await mcc.locator("#in-med_list").fill("meform");
+  await mcc.locator("#in-med_list-0-dose").fill("500 mg");
+  await mcc.locator("#in-med_list-0-frequency").fill("twice a day");
+  await mcc.getByTestId("name-suggestion").first().click();
+  await expect(mcc.locator("#in-med_list")).toHaveValue("Metformin");
+  await mcc.getByRole("button", { name: "+ Add another" }).click();
+  await mcc.locator("#in-med_list-1-name").fill("Ramipryl");
+  await mcc.locator("#in-med_list-1-dose").fill("10 mg");
+  await mcc.locator("#in-med_list-1-frequency").fill("daily");
+  await mcc.getByTestId("name-yes").click();
+  await expect(mcc.getByTestId("name-warning")).toHaveCount(0);
+  await mcc.locator("#q-med_list").screenshot({ path: `${SHOTS}/2-answered-rows.png` });
+
+  for (let i = 0; i < 15 && !(await mcc.getByRole("button", { name: "Send to my care team" }).count()); i++) {
+    await mcc.getByRole("button", { name: "Next →" }).click();
+  }
+  await mcc.getByRole("button", { name: "Send to my care team" }).click();
+  await expect(mcc.getByRole("heading", { name: "Thank you, your intake form has been sent to your care team." })).toBeVisible();
+
+  const emr = await context.newPage();
+  await oncologistOpensLatestIntake(emr, "Doe, Jane");
+  await expect(emr.getByText("AI Summary (paragraph)")).toBeVisible({ timeout: 30_000 });
+  await expect(emr.locator("#raw-med_list")).toContainText("Metformin, 500 mg, twice a day (patient corrected from 'meform')");
+  await expect(emr.locator("#raw-med_list")).toContainText("Ramipryl, 10 mg, daily (patient confirmed this spelling as typed)");
+  await expect(emr.getByText(/corrected "meform" to "Metformin"/).first()).toBeVisible();
+  await expect(emr.getByText(/confirmed "Ramipryl" as typed/).first()).toBeVisible();
+  await expect(emr.getByRole("button", { name: /Medication name spelling checked with patient: Ramipryl/ })).toBeVisible();
+  await emr.screenshot({ path: `${SHOTS}/3-oncologist-summary.png`, fullPage: true });
+
+  await emr.getByRole("button", { name: "Copy to clinic note" }).click();
+  await expect(emr.locator("#currentMedications")).toHaveValue(/corrected "meform" to "Metformin".*Please check against their medication list/s);
+});
+
 test("Listen reads the question, then the patient's response once it is entered or selected", async ({ page }) => {
   await page.addInitScript(() => {
     const spoken: string[] = [];
