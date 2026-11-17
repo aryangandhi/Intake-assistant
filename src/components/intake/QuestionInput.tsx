@@ -7,7 +7,8 @@ import { CONFIRM_KEY, DOSE_WRONG_KEY, NAME_CONFIRM_KEY, NAME_ORIGINAL_KEY, NAME_
 type SR = {
   lang: string;
   interimResults: boolean;
-  onresult: (e: { results: { 0: { transcript: string } }[] }) => void;
+  continuous: boolean;
+  onresult: (e: { results: ArrayLike<{ 0: { transcript: string } }> }) => void;
   onend: () => void;
   onerror: (e: { error: string }) => void;
   start: () => void;
@@ -26,6 +27,9 @@ function browserRecognizer(): SRCtor | null {
 
 // Set once the browser's own recognizer fails (e.g. "network"); after that we record and transcribe on the server.
 let browserRecognizerBroken = false;
+
+/** How often the recording fallback re-transcribes what has been said so far. */
+const LIVE_CHUNK_MS = 3000;
 
 /** True when some form of voice input can work in this browser. */
 export function useSpeechRecognitionSupported() {
@@ -81,15 +85,31 @@ async function toWavBase64(blob: Blob): Promise<string> {
   return btoa(bin);
 }
 
-function MicButton({ onText, label }: { onText: (t: string) => void; label: string }) {
+function appendText(prev: string | undefined, t: string) {
+  return prev && prev.trim() ? `${prev.trim()} ${t}` : t;
+}
+
+/** Joins every phrase heard so far (finished and still-in-progress) into one string. */
+function sessionTranscript(results: ArrayLike<{ 0: { transcript: string } }>) {
+  const parts: string[] = [];
+  for (let i = 0; i < results.length; i++) parts.push(results[i][0].transcript.trim());
+  return parts.filter(Boolean).join(" ");
+}
+
+function MicButton({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
   const supported = useSpeechRecognitionSupported();
   const [state, setState] = useState<"idle" | "listening" | "transcribing">("idle");
   const [error, setError] = useState("");
   const recRef = useRef<SR | null>(null);
   const mediaRef = useRef<MediaRecorder | null>(null);
+  // What was in the box when this recording started; spoken text is added after it.
+  const baseRef = useRef("");
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
   if (!supported) return null;
 
-  // Fallback: record with the microphone, then send the audio to /api/transcribe.
+  // Fallback: record with the microphone and send the audio to /api/transcribe. While recording, the whole
+  // recording so far is re-transcribed every few seconds so the text shows up before the patient taps stop.
   const startRecording = async () => {
     let stream: MediaStream;
     try {
@@ -101,24 +121,52 @@ function MicButton({ onText, label }: { onText: (t: string) => void; label: stri
     }
     const chunks: Blob[] = [];
     const mr = new MediaRecorder(stream);
+    let seq = 0; // newest request wins; older replies that arrive late are dropped
+    let applied = 0;
+    let liveBusy = false;
+    let finishing = false;
+    const transcribe = async (): Promise<{ text?: string; error?: string; ok: boolean }> => {
+      const audio = await toWavBase64(new Blob(chunks, { type: mr.mimeType }));
+      const res = await fetch("/api/transcribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ audio }) });
+      return { ...((await res.json()) as { text?: string; error?: string }), ok: res.ok };
+    };
+    const live = async () => {
+      if (liveBusy || finishing || !chunks.length) return;
+      liveBusy = true;
+      const mine = ++seq;
+      try {
+        const data = await transcribe();
+        if (data.ok && data.text && !finishing && mine > applied) {
+          applied = mine;
+          onChangeRef.current(appendText(baseRef.current, data.text));
+        }
+      } catch {
+        // A failed live update is fine; the final transcription after stopping reports problems.
+      }
+      liveBusy = false;
+    };
+    const timer = setInterval(() => void live(), LIVE_CHUNK_MS);
     mr.ondataavailable = (e) => e.data.size && chunks.push(e.data);
     mr.onstop = async () => {
+      clearInterval(timer);
+      finishing = true;
       stream.getTracks().forEach((t) => t.stop());
       setState("transcribing");
+      const mine = ++seq;
       try {
-        const audio = await toWavBase64(new Blob(chunks, { type: mr.mimeType }));
-        const res = await fetch("/api/transcribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ audio }) });
-        const data = (await res.json()) as { text?: string; error?: string };
-        if (!res.ok) setError(data.error || "Voice typing did not work. Please type your answer.");
-        else if (data.text) onText(data.text);
-        else setError("We didn't hear anything. Please try again.");
+        const data = await transcribe();
+        if (!data.ok) setError(data.error || "Voice typing did not work. Please type your answer.");
+        else if (data.text) {
+          applied = mine;
+          onChangeRef.current(appendText(baseRef.current, data.text));
+        } else if (!applied) setError("We didn't hear anything. Please try again.");
       } catch {
         setError("Voice typing did not work. Please type your answer.");
       }
       setState("idle");
     };
     mediaRef.current = mr;
-    mr.start();
+    mr.start(1000);
     setState("listening");
   };
 
@@ -130,13 +178,19 @@ function MicButton({ onText, label }: { onText: (t: string) => void; label: stri
       return;
     }
     if (state === "transcribing") return;
+    baseRef.current = value;
     const Ctor = browserRecognizerBroken ? null : browserRecognizer();
     if (!Ctor) return void startRecording();
     const rec = new Ctor();
     rec.lang = "en-CA";
-    rec.interimResults = false;
+    // Show words in the answer box as they are spoken; the patient taps again to stop.
+    rec.interimResults = true;
+    rec.continuous = true;
     let switched = false;
-    rec.onresult = (e) => onText(e.results[0][0].transcript);
+    rec.onresult = (e) => {
+      const heard = sessionTranscript(e.results);
+      if (heard) onChangeRef.current(appendText(baseRef.current, heard));
+    };
     rec.onend = () => !switched && setState("idle");
     rec.onerror = (e) => {
       if (e.error === "not-allowed") {
@@ -182,10 +236,6 @@ function MicButton({ onText, label }: { onText: (t: string) => void; label: stri
   );
 }
 
-function appendText(prev: string | undefined, t: string) {
-  return prev && prev.trim() ? `${prev.trim()} ${t}` : t;
-}
-
 export function QuestionInput({
   q,
   value,
@@ -226,14 +276,14 @@ export function QuestionInput({
       return (
         <div className="flex gap-2">
           <input id={inputId} type={q.type === "date" ? "date" : "text"} className={base} value={(value as string) || ""} onChange={(e) => onChange(e.target.value)} />
-          {showMic && <MicButton label={q.label} onText={(t) => onChange(appendText(value as string, t))} />}
+          {showMic && <MicButton label={q.label} value={(value as string) || ""} onChange={onChange} />}
         </div>
       );
     case "longtext":
       return (
         <div className="flex gap-2">
           <textarea id={inputId} rows={dense ? 2 : 3} className={base} value={(value as string) || ""} onChange={(e) => onChange(e.target.value)} />
-          {showMic && <MicButton label={q.label} onText={(t) => onChange(appendText(value as string, t))} />}
+          {showMic && <MicButton label={q.label} value={(value as string) || ""} onChange={onChange} />}
         </div>
       );
     case "yesno":
@@ -342,8 +392,9 @@ export function QuestionInput({
                               {voice && !dense && (
                                 <MicButton
                                   label={`${f.label} ${idx + 1}`}
-                                  onText={(t) => {
-                                    const next = items.map((x, j) => (j === idx ? withNameEdit(x, idx, f.id, appendText(x[f.id], t)) : x));
+                                  value={it[f.id] || ""}
+                                  onChange={(v) => {
+                                    const next = items.map((x, j) => (j === idx ? withNameEdit(x, idx, f.id, v) : x));
                                     set({ none: false, items: next });
                                   }}
                                 />

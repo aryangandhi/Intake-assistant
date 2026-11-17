@@ -295,6 +295,70 @@ test("Patient can use read-aloud and voice input controls", async ({ page }) => 
   await mic.click();
   await expect(page.locator("#in-ay_preferred_name")).toHaveValue("Spoken by the test");
 });
+test("Voice input types live: text appears in the answer box while speaking, before the mic is tapped again", async ({ page }) => {
+  // Fake recogniser that behaves like the browser's: interim results are only delivered when
+  // interimResults is true, and a final result is delivered when recognition stops.
+  await page.addInitScript(() => {
+    class FakeRecognition {
+      lang = "";
+      interimResults = false;
+      continuous = false;
+      onresult: ((event: any) => void) | null = null;
+      onend: (() => void) | null = null;
+      onerror: ((event: any) => void) | null = null;
+      results: { isFinal: boolean; transcript: string }[] = [];
+      constructor() {
+        (window as any).__rec = this;
+      }
+      private emit() {
+        const results = this.results.map((r) => Object.assign([{ transcript: r.transcript }], { isFinal: r.isFinal }));
+        this.onresult?.({ resultIndex: 0, results });
+      }
+      // Test helper: the patient says something. `final` ends the current phrase.
+      say(transcript: string, final = false) {
+        if (!final && !this.interimResults) return;
+        const last = this.results[this.results.length - 1];
+        if (last && !last.isFinal) this.results.pop();
+        this.results.push({ isFinal: final, transcript });
+        this.emit();
+      }
+      start() {}
+      stop() {
+        const last = this.results[this.results.length - 1];
+        if (last && !last.isFinal) this.say(last.transcript, true);
+        this.onend?.();
+      }
+    }
+    Object.defineProperty(window, "SpeechRecognition", { configurable: true, value: FakeRecognition });
+  });
+
+  await page.goto("/myconnectedcare/login");
+  await loginWith(page, "jane.doe@example.com");
+  await page.getByRole("link", { name: /Questionnaires/ }).click();
+  await page.getByRole("link", { name: "Start Intake Form" }).click();
+
+  const field = page.locator("#in-ay_preferred_name");
+  await field.fill("Sam");
+  await page.getByRole("button", { name: "Speak your answer for What name would you like us to call you?" }).click();
+  await expect(page.getByText("Listening… tap to stop")).toBeVisible();
+
+  // Interim text shows up immediately, after what was already typed, while still listening.
+  await page.evaluate(() => (window as any).__rec.say("Hello"));
+  await expect(field).toHaveValue("Sam Hello");
+  await page.evaluate(() => (window as any).__rec.say("Hello there"));
+  await expect(field).toHaveValue("Sam Hello there");
+  await expect(page.getByText("Listening… tap to stop")).toBeVisible();
+
+  // A finished phrase followed by a new interim phrase: nothing is duplicated or lost.
+  await page.evaluate(() => (window as any).__rec.say("Hello there", true));
+  await page.evaluate(() => (window as any).__rec.say("my friend"));
+  await expect(field).toHaveValue("Sam Hello there my friend");
+
+  // Stopping keeps the text exactly as it was.
+  await page.getByRole("button", { name: "Stop voice input for What name would you like us to call you?" }).click();
+  await expect(page.getByText("Listening… tap to stop")).toBeHidden();
+  await expect(field).toHaveValue("Sam Hello there my friend");
+});
 
 test("Read aloud reads the question, and the answer options when the form provides them", async ({ page }) => {
   await page.addInitScript(() => {
