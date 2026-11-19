@@ -63,3 +63,46 @@ test("A new referral within 7 days gets a text message right away, along with th
   await expect(page.getByTestId("text-message")).toHaveCount(1);
   await expect(page.getByTestId("text-message")).toContainText("Hi Text");
 });
+
+async function adminOpensNewReferral(page: Page) {
+  await page.goto("/intake-assistant");
+  await page.getByLabel(/email/i).first().fill("admin@wrhn-demo.ca");
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await page.getByRole("button", { name: /log in|sign in/i }).click();
+  await page.getByRole("link", { name: "+ New referral" }).click();
+}
+
+test("A referral more than 7 days away sends the email and the text together when the demo button is clicked", async ({ page, context }) => {
+  const ia = await context.newPage();
+  await adminOpensNewReferral(ia);
+  await ia.getByLabel("First name").fill("Later");
+  await ia.getByLabel("Last name").fill("Patient");
+  await ia.getByLabel("Date of birth").fill("1970-05-05");
+  await ia.getByLabel("Phone").fill("519-555-0200");
+  await ia.getByLabel("Email").fill("later.patient@example.com");
+  const appt = new Date(Date.now() + 20 * 864e5);
+  const local = new Date(appt.getTime() - appt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  await ia.getByLabel("First appointment (date and time)").fill(local);
+  await ia.getByLabel("Provider group").selectOption("Hematology");
+  await ia.getByRole("button", { name: "Save referral" }).click();
+
+  // Nothing is sent yet.
+  await signInToInbox(page, "later.patient@example.com");
+  await expect(page.getByText("No emails yet.")).toBeVisible();
+  await page.goto("/messages");
+  await expect(page.getByTestId("text-message")).toHaveCount(0);
+
+  // The demo button sends both.
+  await ia.goto("/intake-assistant/referrals");
+  await ia.getByRole("row", { name: /Later/ }).getByRole("button", { name: "Send intake email now (demo)" }).click();
+  await page.goto("/inbox");
+  await expect(page.getByRole("link", { name: /Action needed/ })).toBeVisible();
+  await page.goto("/messages");
+  await expect(page.getByTestId("text-message")).toHaveCount(1);
+});
+
+test("The referral form cannot be saved without a phone number or an email", async ({ page }) => {
+  await adminOpensNewReferral(page);
+  await expect(page.getByLabel("Phone")).toHaveAttribute("required", "");
+  await expect(page.getByLabel("Email")).toHaveAttribute("required", "");
+});
