@@ -29,6 +29,9 @@ test("Seeded patient has an intake text message with the same information as the
   await expect(text.getByRole("link", { name: /nurse call/i })).toBeVisible();
   await expect(text.getByRole("link", { name: /MyConnectedCare|intake form/i })).toBeVisible();
   await expect(text).toContainText(/list of your current medications/i);
+  // Online intake is offered before the nurse call option
+  const body = await text.innerText();
+  expect(body.search(/intake form/i)).toBeLessThan(body.search(/nurse call/i));
 });
 
 test("The nurse call link in the text message opens the help request form", async ({ page }) => {
