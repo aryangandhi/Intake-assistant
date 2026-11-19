@@ -15,7 +15,7 @@ npm run setup          # creates the SQLite database and loads demo data
 npm run dev            # http://localhost:3000
 ```
 
-After the first time, `npm run dev` is all you need.
+After the first time, `npm run dev` is all you need. If you pulled a change that adds a database table (such as text messages), run `npm run setup` once more.
 
 For the demo day you can also run a production build, which is faster: `npm run build` then `npm start`.
 
@@ -36,6 +36,7 @@ If the key is missing, the call fails, it takes more than 20 seconds, or the out
 |---|---|
 | `/` | Demo hub (reset button behind the gear icon) |
 | `/inbox` | Patient email inbox (simulated) |
+| `/messages` | Patient text messages (simulated), same sign-in as the inbox |
 | `/myconnectedcare` | MyConnectedCare (prototype), patient portal |
 | `/myconnectedcare/example` | Example completed form (public) |
 | `/intake-assistant` | Intake Assistant: admin, nurse and co-op student portal |
@@ -48,7 +49,7 @@ Password for every account: **`password`**
 
 | Role | Email | Systems |
 |---|---|---|
-| Patient | `jane.doe@example.com` | Inbox, MyConnectedCare |
+| Patient | `jane.doe@example.com` | Inbox, Messages, MyConnectedCare |
 | Patient (no portal account yet, can sign up) | `robert.chen@example.com` (DOB 1960-11-21) | Inbox, MyConnectedCare sign up |
 | Admin | `admin@wrhn-demo.ca` | Intake Assistant |
 | Nurse | `nurse@wrhn-demo.ca` | Intake Assistant, EMR |
@@ -57,15 +58,17 @@ Password for every account: **`password`**
 
 Each system has its own login, so you can be logged in as the patient in one tab and the nurse in another.
 
+Every referral requires both an email and a phone number, and the intake goes out as **both an email and a text message** (same information, shorter wording). No real email or SMS is sent: the email appears in `/inbox` and the text in `/messages` (also linked from the inbox header). **Send intake email now (demo)** sends both.
+
 **Any referred patient** can sign in to the inbox with their email and `password`, including patients the admin just entered. The **Open MyConnectedCare** button in the intake email signs that patient straight in to the portal (creating their account if needed), so there is no second login.
 
 ### Running the form again without a reset
 
-1. Intake Assistant → Admin → **+ New referral**. Use a new email (e.g. `demo2@example.com`) and an appointment within 7 days, so the email is sent right away (otherwise click **Send intake email now (demo)**).
-2. Inbox → **Sign out** → sign in as that email with `password`.
+1. Intake Assistant → Admin → **+ New referral**. Use a new email (e.g. `demo2@example.com`) and an appointment within 7 days, so the email and text are sent right away (otherwise click **Send intake email now (demo)**).
+2. Inbox → **Sign out** → sign in as that email with `password`. The text message is under **Text messages** in the header (or `/messages`).
 3. Open the email → **Open MyConnectedCare** → you are in that patient's portal with a fresh form.
 
-Seeded patients: Jane Doe (email sent, nothing started), Margaret Wilson (completed online, already in the EMR with a summary), Robert Chen (email sent, no portal account), Ahmed Hassan (asked for a nurse call earlier, already called), Linda Nguyen (referral just entered, email not sent yet). Appointment dates are relative to the day you reset.
+Seeded patients: Jane Doe (email and text sent, nothing started), Margaret Wilson (completed online, already in the EMR with a summary), Robert Chen (email sent, no portal account), Ahmed Hassan (asked for a nurse call earlier, already called), Linda Nguyen (referral just entered, email and text not sent yet). Appointment dates are relative to the day you reset.
 
 ## Resetting between rounds
 
@@ -78,7 +81,7 @@ Close the other tabs (or reload them) after a reset.
 
 ```bash
 npm test             # unit tests for the citation validator
-npm run test:e2e     # Playwright: main scenarios, signup, nurse-call paths, voice controls, demo shortcuts and reset
+npm run test:e2e     # Playwright: main scenarios, signup, nurse-call paths, voice controls, demo shortcuts, text messages and reset
 ```
 
 First time only, Playwright needs a browser: `npx playwright install chromium`. The e2e tests reset the demo data.
@@ -89,6 +92,7 @@ First time only, Playwright needs a browser: `npx playwright install chromium`. 
 |---|---|
 | Intake questions, examples, conditional logic | `src/config/intakeQuestions.ts` |
 | Intake email wording | `src/content/intakeEmail.ts` |
+| Intake text message wording | `src/content/intakeText.ts` |
 | Example completed form | `src/content/exampleForm.ts` |
 | Seed data | `src/lib/seed.ts` |
 | AI prompt and model call | `src/lib/ai/summarize.ts` |
