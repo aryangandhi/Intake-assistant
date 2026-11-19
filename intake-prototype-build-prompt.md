@@ -65,7 +65,7 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 
 ## 4. Data model (suggested)
 
-- **Referral:** patient name, date of birth, email, phone, first appointment date (date and time), provider group, status. Status is one of: `referral_entered → email_sent → in_progress → submitted | help_requested → nurse_completed | coop_pending_review → in_emr`.
+- **Referral:** patient name, date of birth, email (required), phone (required), first appointment date (date and time), provider group, status. Status is one of: `referral_entered → email_sent → in_progress → submitted | help_requested → nurse_completed | coop_pending_review → in_emr`.
 - **Email:** recipient, subject, body (HTML), sent time, linked referral.
 - **TextMessage:** recipient phone (taken from the referral), body, sent time, linked referral.
 - **HelpRequest:** referral, name, DOB, phone, preferred language, best time to call, notes, created time, status (`new | called | completed`).
@@ -78,12 +78,12 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 
 ### 5.1 Intake Assistant: admin side (referrals)
 
-- **Referral form** with these fields: first name, last name, date of birth, email, phone, first appointment date, provider group.
+- **Referral form** with these fields: first name, last name, date of birth, email, phone, first appointment date, provider group. All fields are required, including email and phone, so every referral can be reached both ways.
 - **Email scheduling:** on save, the system schedules the intake email for 7 days before the appointment.
   - Show the scheduled send date in the referral list.
   - Because we can't wait a week during a demo, add a **"Send intake email now (demo)"** button.
   - Also send immediately if the appointment is 7 days away or less.
-- **Text message:** the intake text message (see 5.2b) is sent at the same time as the intake email, on the same schedule, by the same **"Send intake email now (demo)"** button, and immediately under the same 7-day rule. A referral without a phone number gets the email only.
+- **Text message:** the intake text message (see 5.2b) is sent at the same time as the intake email, on the same schedule, by the same **"Send intake email now (demo)"** button, and immediately under the same 7-day rule. Because email and phone are both required, every intake is sent as both an email and a text message, never one without the other. The demo button sends both, and after saving a referral that is due now, the admin sees a confirmation that the email and the text message were sent.
 - **Referral list** with status chips for each referral.
 - This screen is mainly used to *explain* where the email comes from. Scenario cards start from the patient inbox, so the seeded Jane Doe referral must already have an email sent.
 
@@ -119,6 +119,7 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 
 Some patients do not check email often and may miss their appointment and intake information. A patient suggested also sending a text message with the same information as the email. This came from peer feedback, based on how other healthcare providers send appointment reminders by text.
 
+- The text is sent to the phone number on the referral, always together with the email.
 - A simple phone-style view at `/messages`, listing the text messages received by the logged-in demo patient. Nothing is actually sent.
 - **The text message** carries the same information as the email, in short form:
   - The appointment date and time.
