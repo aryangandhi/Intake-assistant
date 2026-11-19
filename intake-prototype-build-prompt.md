@@ -91,9 +91,8 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 
 - A simple webmail-style inbox: a list of emails on one side, the open email on the other. Patients log in with the same demo patient account, or pick a patient on the inbox page.
 - **The intake email** contains the items below. Use the default draft that follows, and keep the email text in one editable template file so our team can replace the wording later without touching code.
-  - Near the **top**, in large bold text, the option to have a nurse call them instead: a button or link to "Prefer to do this over the phone? Request a nurse call." This came directly from peer feedback, so it must not be buried at the bottom.
-  - Step-by-step instructions: (1) click the link to log in or sign up for MyConnectedCare, (2) click **Questionnaires** on the left, (3) click **Start Intake Form**.
-  - A button linking to MyConnectedCare.
+  - **First**, the online intake option: step-by-step instructions (1) click the link to log in or sign up for MyConnectedCare, (2) click **Questionnaires** on the left, (3) click **Start Intake Form**, followed by a button linking to MyConnectedCare. Patients should be encouraged to complete the intake themselves online.
+  - **Below** the online instructions, the option to have a nurse call them instead: a link to "Prefer to do this over the phone? Request a nurse call." It must stay clearly available, but must **not** be bold, large or placed first. Peer feedback: when it was bolded at the top, patients skimming the email read it as the preferred option and picked it without seeing the online option.
   - A link to an **example completed form** (see 5.3).
   - A reminder to **bring an official list of current medications** to the appointment.
   - A due date: please complete before the appointment.
@@ -105,13 +104,13 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 >
 > Your first appointment at the Cancer Centre is on {date, time}. Before then, please complete your new patient intake form online. It takes about 20 to 30 minutes and you can save and come back later.
 >
-> **Prefer to do this over the phone?** [Request a nurse call] and a nurse will call you 1 to 2 days before your appointment.
->
 > How to complete the form online: 1) Click the button below to log in or sign up for MyConnectedCare. 2) Click "Questionnaires" on the left. 3) Click "Start Intake Form".
 >
 > [Open MyConnectedCare]
 >
 > Not sure how to answer? [See an example of a completed form]
+>
+> Prefer to do this over the phone? [Request a nurse call] and a nurse will call you 1 to 2 days before your appointment.
 >
 > Please bring an official list of your current medications to your appointment.
 
@@ -123,13 +122,13 @@ Some patients do not check email often and may miss their appointment and intake
 - A simple phone-style view at `/messages`, listing the text messages received by the logged-in demo patient. Nothing is actually sent.
 - **The text message** carries the same information as the email, in short form:
   - The appointment date and time.
-  - The link to MyConnectedCare, to reach the intake options.
-  - The **Request a nurse call** option, near the top, as in the email.
+  - The link to MyConnectedCare to complete the intake online, **first**, as in the email.
+  - The **Request a nurse call** option, after the online option (not first, not emphasised), as in the email.
   - A reminder to complete the form before the appointment and to bring an official list of current medications.
 - Keep the text wording in one editable template file (for example `src/content/intakeText.ts`), like the email.
 
 **Default text message draft:**
-> Cancer Centre: Hi {first name}, your first appointment is on {date, time}. Prefer a phone call? Request a nurse call: {help link}. Otherwise, please complete your intake form online before then: {MyConnectedCare link}. Please bring an official list of your current medications.
+> Cancer Centre: Hi {first name}, your first appointment is on {date, time}. Please complete your intake form online before then: {MyConnectedCare link}. Prefer a phone call? Request a nurse call: {help link}. Please bring an official list of your current medications.
 
 ### 5.3 MyConnectedCare (patient portal)
 
