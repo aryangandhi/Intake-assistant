@@ -30,7 +30,7 @@ export function ReferralForm() {
         </select>
       </div>
       <div className="sm:col-span-2">
-        <p className="text-sm text-slate-600">On save, the intake email is scheduled for 7 days before the appointment (or sent right away if the appointment is sooner).</p>
+        <p className="text-sm text-slate-600">On save, the intake email and text message are scheduled for 7 days before the appointment (or sent right away if the appointment is sooner).</p>
         {err && <p role="alert" className="mt-2 text-sm text-red-700">{err}</p>}
         <button disabled={pending} className="mt-3 rounded-md bg-ia-600 px-5 py-2 font-semibold text-white hover:bg-ia-700">Save referral</button>
       </div>

@@ -94,7 +94,9 @@ test("A referral more than 7 days away sends the email and the text together whe
 
   // The demo button sends both.
   await ia.goto("/intake-assistant/referrals");
-  await ia.getByRole("row", { name: /Later/ }).getByRole("button", { name: "Send intake email now (demo)" }).click();
+  const row = ia.getByRole("row", { name: /Later/ });
+  await row.getByRole("button", { name: "Send intake email now (demo)" }).click();
+  await expect(row.getByRole("button", { name: "Send intake email now (demo)" })).toHaveCount(0); // wait for the send to finish
   await page.goto("/inbox");
   await expect(page.getByRole("link", { name: /Action needed/ })).toBeVisible();
   await page.goto("/messages");
