@@ -105,6 +105,21 @@ test("A referral more than 7 days away sends the email and the text together whe
 
 test("The referral form cannot be saved without a phone number or an email", async ({ page }) => {
   await adminOpensNewReferral(page);
-  await expect(page.getByLabel("Phone")).toHaveAttribute("required", "");
-  await expect(page.getByLabel("Email")).toHaveAttribute("required", "");
+  await page.getByLabel("First name").fill("Required");
+  await page.getByLabel("Last name").fill("Fields");
+  await page.getByLabel("Date of birth").fill("1970-05-05");
+  await page.getByLabel("Email").fill("required.fields@example.com");
+  const appt = new Date(Date.now() + 20 * 864e5);
+  const local = new Date(appt.getTime() - appt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  await page.getByLabel("First appointment (date and time)").fill(local);
+  await page.getByLabel("Provider group").selectOption("Hematology");
+  await page.getByRole("button", { name: "Save referral" }).click();
+  await expect(page).toHaveURL(/\/referrals\/new/);
+  await expect(page.getByRole("alert").filter({ hasText: "Please fix the following" })).toContainText("Phone must be 10 digits");
+
+  await page.getByLabel("Phone").fill("519-555-0100");
+  await page.getByLabel("Email").clear();
+  await page.getByRole("button", { name: "Save referral" }).click();
+  await expect(page).toHaveURL(/\/referrals\/new/);
+  await expect(page.getByRole("alert").filter({ hasText: "Please fix the following" })).toContainText("Enter an email");
 });
