@@ -12,6 +12,9 @@ export const INTAKE_EMAIL_HTML = `
 Before then, please complete your new patient intake form online.
 It takes about 20 to 30 minutes and you can save and come back later.</p>
 
+<p>MyConnectedCare is the Cancer Centre's secure online patient portal, where you can complete forms, see your appointments and message your care team.
+If you have not used it before, you can sign up using the button below.</p>
+
 <p><strong>How to complete the form online:</strong></p>
 <ol>
   <li>Click the button below to log in or sign up for MyConnectedCare.</li>

@@ -71,4 +71,13 @@ test("Email: explains MyConnectedCare is a patient portal, before the online ste
   const y = async (l: typeof intro) => (await l.boundingBox())!.y;
   expect(await y(opening)).toBeLessThan(await y(intro));
   expect(await y(intro)).toBeLessThan(await y(steps));
+
+  // Screenshot of the changed part: the opening paragraph, the new portal sentence and the start of the steps
+  const box = (await intro.boundingBox())!;
+  const open = (await opening.boundingBox())!;
+  const stepsBox = (await steps.boundingBox())!;
+  await page.screenshot({
+    path: "docs/screenshots/email-myconnectedcare-explained.png",
+    clip: { x: Math.max(open.x - 16, 0), y: open.y - 16, width: Math.max(open.width, box.width) + 32, height: stepsBox.y + stepsBox.height - open.y + 140 },
+  });
 });
