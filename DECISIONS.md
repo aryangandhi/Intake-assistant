@@ -73,6 +73,7 @@ Where the brief was unclear, I chose the simplest option that keeps the demo wor
 - "Demo: fill in randomly" on the patient form and the PowerForm fills every blank question with believable answers. Answers already typed are kept.
 - AI point-form summary has a "Copy all points" button. Copy buttons fall back to a non-clipboard-API copy when the page is opened over plain http (e.g. a second laptop on the same Wi-Fi).
 - The "Open MyConnectedCare" email button now redirects with a relative URL. Before, it redirected to localhost, which failed on a teammate's laptop through the Cloudflare tunnel.
+- Text message: the intake text message mirrors the email content in short form and is sent together with the email. It is simulated only (no real SMS). Email and phone are both required on a referral, so the email and the text message are always sent together. Added to the spec as section 5.2b; not yet built.
 
 ## v3: unusual medication check ("Are you sure?")
 - When a patient (or nurse) leaves a medication row's dose or "how often" box, the row is checked for doses that look like typing mistakes, e.g. metformin 100 g/day (typical maximum about 3 g/day). If it looks unusual, a notice under the row asks **"Are you sure about your dose of {medication} {dose}/{frequency}?"** with two buttons: **Yes** and **No**.

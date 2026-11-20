@@ -34,7 +34,7 @@ We are a university team (CS497/HLTH480) working with the WRHN Cancer Centre.
 
 - **Synthetic data only.** Seed only fictional patients (for example, "Jane Doe"). Show a thin banner on every page: "Class prototype. Fictional data only. Do not enter real personal health information." The AI feature must only ever receive this fictional data.
 - **Not affiliated.** MyConnectedCare and Oracle Health are real systems we are representing. Build our own generic look *inspired by* the attached screenshots (layout and structure), but do not copy logos, trademarks or exact branding. Label screens as "MyConnectedCare (prototype)" and "Oracle Health EMR (prototype)", and include a footer line saying the prototype is not affiliated with WRHN or Oracle.
-- **No real email or SMS.** Emails go to a simulated inbox inside the app (see 5.2).
+- **No real email or SMS sending.** Emails go to a simulated inbox inside the app (see 5.2), and text messages go to a simulated text-message view (see 5.2b).
 - **Reliable during the demo.** If the AI API fails or no API key is set, fall back to a deterministic, template-based summary so the flow never breaks (see 6.5).
 
 ## 3. Architecture
@@ -46,6 +46,7 @@ We are a university team (CS497/HLTH480) working with the WRHN Cancer Centre.
 | `/` | **Demo hub**: three cards (Patient, Nurse/Admin, Doctor) linking to each system. A "Reset demo data" button sits behind a small settings icon. | Team members running the demo |
 | `/inbox` | **Patient email inbox (simulated)**, showing the emails received by the logged-in demo patient | Patient |
 | `/myconnectedcare` | **MyConnectedCare (prototype)**, the patient portal. Patients only; no nurse or doctor access. | Patient |
+| `/messages` | **Patient text messages (simulated)**, a phone-style view of the text messages received by the logged-in demo patient | Patient |
 | `/intake-assistant` | **Intake Assistant**: a hospital admin and nursing portal. Admins enter referrals, nurses get notifications, nurses (or co-op students) complete the PowerForm, and nurses review co-op intakes. Present it as an ideal all-in-one tool for intake staff. | Admin, Nurse, Co-op student |
 | `/intake-assistant/request-help` | Public **"Request a nurse call" form**, linked from the email and from the digital form | Patient (no login) |
 | `/emr` | **Oracle Health EMR (prototype)**: patient charts, the intake document (AI summary and raw data) and the clinic note | Nurse, Oncologist |
@@ -64,8 +65,9 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 
 ## 4. Data model (suggested)
 
-- **Referral:** patient name, date of birth, email, phone, first appointment date (date and time), provider group, status. Status is one of: `referral_entered → email_sent → in_progress → submitted | help_requested → nurse_completed | coop_pending_review → in_emr`.
+- **Referral:** patient name, date of birth, email (required), phone (required), first appointment date (date and time), provider group, status. Status is one of: `referral_entered → email_sent → in_progress → submitted | help_requested → nurse_completed | coop_pending_review → in_emr`.
 - **Email:** recipient, subject, body (HTML), sent time, linked referral.
+- **TextMessage:** recipient phone (taken from the referral), body, sent time, linked referral.
 - **HelpRequest:** referral, name, DOB, phone, preferred language, best time to call, notes, created time, status (`new | called | completed`).
 - **IntakeSubmission:** referral, answers (JSON keyed by stable question IDs), completed by (`patient | nurse | coop_student`), completed-by user, submitted time, list of incomplete fields, review status (for co-op intakes).
 - **AISummary:** submission, paragraph sentences (with citations), bullet sections (with citations), flagged and missing items, model used or "template fallback", validation results, generated time.
@@ -76,12 +78,13 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 
 ### 5.1 Intake Assistant: admin side (referrals)
 
-- **Referral form** with these fields: first name, last name, date of birth, email, phone, first appointment date, provider group.
+- **Referral form** with these fields: first name, last name, date of birth, email, phone, first appointment date, provider group. All fields are required, including email and phone, so every referral can be reached both ways.
   - **Field validation:** fields that need a specific format or length are validated on submit: phone must be exactly 10 digits, email must be a valid address, date of birth cannot be in the future. Submission is blocked until the errors are fixed. An error summary at the top of the form lists each missing or incorrect field (clicking an entry focuses that field), and each field shows an inline message (e.g. "Phone must be 10 digits"). Checked in the browser and again on the server. Without this, a wrong phone number was saved silently and nobody was told.
 - **Email scheduling:** on save, the system schedules the intake email for 7 days before the appointment.
   - Show the scheduled send date in the referral list.
   - Because we can't wait a week during a demo, add a **"Send intake email now (demo)"** button.
   - Also send immediately if the appointment is 7 days away or less.
+- **Text message:** the intake text message (see 5.2b) is sent at the same time as the intake email, on the same schedule, by the same **"Send intake email now (demo)"** button, and immediately under the same 7-day rule. Because email and phone are both required, every intake is sent as both an email and a text message, never one without the other. The demo button sends both, and after saving a referral that is due now, the admin sees a confirmation that the email and the text message were sent.
 - **Referral list** with status chips for each referral.
 - This screen is mainly used to *explain* where the email comes from. Scenario cards start from the patient inbox, so the seeded Jane Doe referral must already have an email sent.
 
@@ -112,6 +115,22 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 > Not sure how to answer? [See an example of a completed form]
 >
 > Please bring an official list of your current medications to your appointment.
+
+### 5.2b Patient text message (simulated)
+
+Some patients do not check email often and may miss their appointment and intake information. A patient suggested also sending a text message with the same information as the email. This came from peer feedback, based on how other healthcare providers send appointment reminders by text.
+
+- The text is sent to the phone number on the referral, always together with the email.
+- A simple phone-style view at `/messages`, listing the text messages received by the logged-in demo patient. Nothing is actually sent.
+- **The text message** carries the same information as the email, in short form:
+  - The appointment date and time.
+  - The link to MyConnectedCare, to reach the intake options.
+  - The **Request a nurse call** option, near the top, as in the email.
+  - A reminder to complete the form before the appointment and to bring an official list of current medications.
+- Keep the text wording in one editable template file (for example `src/content/intakeText.ts`), like the email.
+
+**Default text message draft:**
+> Cancer Centre: Hi {first name}, your first appointment is on {date, time}. Prefer a phone call? Request a nurse call: {help link}. Otherwise, please complete your intake form online before then: {MyConnectedCare link}. Please bring an official list of your current medications.
 
 ### 5.3 MyConnectedCare (patient portal)
 
@@ -249,7 +268,7 @@ If the API call fails or times out (around 20 seconds), or no key is set, build 
 These must work end to end, starting from a fresh reset.
 
 ### Scenario 1: patient completes the form online (tech solution)
-1. Patient opens `/inbox` and sees the intake email.
+1. Patient opens `/inbox` and sees the intake email (the same information is in the text message at `/messages`).
 2. Clicks the link, then logs in or signs up for MyConnectedCare.
 3. Goes to Questionnaires and clicks **Start Intake Form**.
 4. Completes the form (with optional read-aloud or voice), sees the review step, and submits.
@@ -326,7 +345,7 @@ These must work end to end, starting from a fresh reset.
 
 ## 12. Out of scope
 
-- Real email or SMS sending.
+- Real email or SMS sending (both are simulated inside the app).
 - Real integration with MyConnectedCare, Oracle Health or Cerner (FHIR, etc.).
 - Production-grade authentication, real patient data and HIPAA/PHIPA compliance work. Just keep the API key server-side and keep the synthetic-data banner.
 - A WaterlooWorks job posting page. The co-op job posting is a separate document, not part of this app.
