@@ -92,6 +92,7 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 
 - A simple webmail-style inbox: a list of emails on one side, the open email on the other. Patients log in with the same demo patient account, or pick a patient on the inbox page.
 - **The intake email** contains the items below. Use the default draft that follows, and keep the email text in one editable template file so our team can replace the wording later without touching code.
+  - **A brief statement of what MyConnectedCare is**, placed as its own short plain paragraph directly under the opening paragraph (the one with the appointment date and time) and directly above the "How to complete the form online" heading, so patients read what the portal is before they are told to log in or sign up. Not inside a box or card, not bold. It says it is the hospital's secure patient portal, where patients can complete forms, see appointments and message their care team. Written for new patients who have never used it (a patient told us she did not know about MyConnectedCare until after her first oncology appointment). Keep it short and not bold.
   - **First**, the online intake option: step-by-step instructions (1) click the link to log in or sign up for MyConnectedCare, (2) click **Questionnaires** on the left, (3) click **Start Intake Form**, followed by a button linking to MyConnectedCare. Patients should be encouraged to complete the intake themselves online.
   - **Below** the online instructions, the option to have a nurse call them instead: a link to "Prefer to do this over the phone? Request a nurse call." It must stay clearly available, but must **not** be bold, large or placed first. Peer feedback: when it was bolded at the top, patients skimming the email read it as the preferred option and picked it without seeing the online option.
   - A link to an **example completed form** (see 5.3).
@@ -104,6 +105,8 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 > Hello {first name},
 >
 > Your first appointment at the Cancer Centre is on {date, time}. Before then, please complete your new patient intake form online. It takes about 20 to 30 minutes and you can save and come back later.
+>
+> MyConnectedCare is the Cancer Centre's secure online patient portal, where you can complete forms, see your appointments and message your care team. If you have not used it before, you can sign up using the button below.
 >
 > How to complete the form online: 1) Click the button below to log in or sign up for MyConnectedCare. 2) Click "Questionnaires" on the left. 3) Click "Start Intake Form".
 >
