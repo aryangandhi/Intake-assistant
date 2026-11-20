@@ -55,12 +55,12 @@ const ROWS: Record<string, Record<string, string>[]> = {
     { allergen: "Latex", reaction: "Itchy skin" },
   ],
   med_list: [
-    { name: "Metformin", dose: "500 mg", frequency: "twice a day" },
-    { name: "Ramipril", dose: "10 mg", frequency: "once a day" },
-    { name: "Atorvastatin", dose: "20 mg", frequency: "once a day at bedtime" },
-    { name: "Levothyroxine", dose: "50 mcg", frequency: "once a day" },
-    { name: "Vitamin D", dose: "1000 IU", frequency: "once a day" },
-    { name: "Acetaminophen", dose: "500 mg", frequency: "as needed for pain" },
+    { name: "Metformin", dose: "500", unit: "mg", frequency: "twice a day" },
+    { name: "Ramipril", dose: "10", unit: "mg", frequency: "once a day" },
+    { name: "Atorvastatin", dose: "20", unit: "mg", frequency: "once a day at bedtime" },
+    { name: "Levothyroxine", dose: "50", unit: "mcg", frequency: "once a day" },
+    { name: "Vitamin D", dose: "1000", unit: "IU", frequency: "once a day" },
+    { name: "Acetaminophen", dose: "500", unit: "mg", frequency: "as needed for pain" },
   ],
   sx_list: [
     { procedure: "Gallbladder removed", when: "2012" },

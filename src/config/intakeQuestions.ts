@@ -28,6 +28,7 @@ export interface RepeatField {
   id: string;
   label: string;
   example?: string;
+  options?: string[]; // shown as a drop-down list instead of a text box
 }
 
 export interface Question {
@@ -221,7 +222,8 @@ export const INTAKE_SECTIONS: Section[] = [
         type: "repeat",
         repeatFields: [
           { id: "name", label: "Medication name", example: "Example: Metformin" },
-          { id: "dose", label: "Dose", example: "Example: 500 mg" },
+          { id: "dose", label: "Dose", example: "Example: 500" },
+          { id: "unit", label: "Unit", example: "Example: mg", options: ["mg", "g", "mcg", "mL", "IU", "units", "tablets", "other"] },
           { id: "frequency", label: "How often", example: "Example: twice a day" },
         ],
         noneLabel: "I don't take any medications",

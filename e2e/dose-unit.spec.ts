@@ -40,6 +40,13 @@ test("Medications: separate Dose and Unit boxes, and a notice when one is missin
   await mcc.locator("#in-med_list-0-frequency").click(); // leaves the dose box
   await expect(notice).toContainText("Please choose a unit");
 
+  // Screenshot of the changed part: separate Dose and Unit boxes, and the notice when the unit is missing
+  await mcc.locator("#in-med_list-0-frequency").fill("twice a day");
+  await mcc.locator("#in-med_list-0-frequency").blur();
+  // The sticky "Need help?" bar would cover the name box in a full-page shot, so let it scroll with the page.
+  await mcc.evaluate(() => document.querySelectorAll("*").forEach((el) => { if (["sticky", "fixed"].includes(getComputedStyle(el).position) && el.tagName !== "BODY") (el as HTMLElement).style.position = "static"; }));
+  await mcc.screenshot({ path: "docs/screenshots/medication-dose-unit.png", fullPage: true });
+
   await mcc.locator("#in-med_list-0-unit").selectOption("mg");
   await expect(notice).toHaveCount(0);
 

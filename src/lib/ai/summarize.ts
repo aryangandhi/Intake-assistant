@@ -5,6 +5,7 @@ import { buildTemplateSummary } from "./fallback";
 import { ModelSummarySchema, RESPONSE_JSON_SCHEMA, type CheckedSummary, type ModelSummary, type ValidationReport } from "./schema";
 import { validateSummary } from "./validate";
 import { applyDoseConfirmations } from "./doseConfirmations";
+import { applyDoseGaps } from "./doseGaps";
 import { applyNameConfirmations } from "./nameConfirmations";
 
 export const DEFAULT_MODEL = "openai/gpt-4.1-mini";
@@ -87,6 +88,7 @@ export async function generateSummary(items: RawItem[], incomplete: string[]): P
           }
           applyDoseConfirmations(out, items);
           applyNameConfirmations(out, items);
+          applyDoseGaps(out, items);
           const { checked, report } = validateSummary(out, refs, knownIds);
           return { content: checked, validation: report, modelUsed: model, isFallback: false };
         }
@@ -100,7 +102,7 @@ export async function generateSummary(items: RawItem[], incomplete: string[]): P
     }
   }
 
-  const tpl = applyNameConfirmations(applyDoseConfirmations(buildTemplateSummary(items, incomplete), items), items);
+  const tpl = applyDoseGaps(applyNameConfirmations(applyDoseConfirmations(buildTemplateSummary(items, incomplete), items), items), items);
   const { checked, report } = validateSummary(tpl, refs, knownIds);
   return { content: checked, validation: report, modelUsed: "Template summary (AI unavailable)", isFallback: true };
 }
