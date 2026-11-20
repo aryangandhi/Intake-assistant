@@ -67,7 +67,7 @@ To give each tester a fresh patient, have the admin enter a new referral (appoin
 10. Click **Mark as verified**, then **Copy to clinic note**. Edit the note (e.g. Plan) and click **Save note**.
 
 ### Scenario 2 (Card 2)
-1. Mail: open the intake email, click **Request a nurse call** near the top (new tab). Alternative: from inside the form, click **Need help? Request a nurse call**.
+1. Mail: open the intake email, click **Request a nurse call** below the online instructions (new tab). Alternative: from inside the form, click **Need help? Request a nurse call**.
 2. Check pre-filled name, DOB, phone; add language and best time; click **Request a nurse call**.
 3. Sees "Thanks. A nurse will call you 1 to 2 days before your appointment on …".
 4. Intake Assistant: log in as nurse; lands on **Notifications** with an unread badge.

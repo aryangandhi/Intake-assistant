@@ -37,6 +37,11 @@ test("Scenario 1: patient completes the form online, oncologist reviews it", asy
   await loginWith(page, "jane.doe@example.com");
   await page.getByRole("link", { name: /Action needed: Complete your new patient intake form/ }).click();
   await expect(page.getByText("Prefer to do this over the phone?")).toBeVisible();
+  // Online intake comes first; the nurse call option follows it
+  const emailBody = page.locator("body");
+  const emailText = (await emailBody.innerText());
+  expect(emailText.indexOf("Open MyConnectedCare")).toBeGreaterThan(-1);
+  expect(emailText.indexOf("Open MyConnectedCare")).toBeLessThan(emailText.indexOf("Request a nurse call"));
 
   // 2. Open MyConnectedCare from the email (signs the patient straight in)
   const mcc = await openFromEmail(context, page, /Open MyConnectedCare/);
