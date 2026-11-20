@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { ageFromDob, buildRawData, computeIncomplete, flatRaw, type Answers } from "./answers";
-import { renderIntakeEmail, SEVEN_DAYS } from "./email";
+import { renderIntakeEmail, renderIntakeText, SEVEN_DAYS } from "./email";
 import { validateSummary } from "./ai/validate";
 import type { ModelSummary } from "./ai/schema";
 
@@ -120,6 +120,7 @@ export async function seedDemo(prisma: PrismaClient) {
   await prisma.intakeSubmission.deleteMany();
   await prisma.helpRequest.deleteMany();
   await prisma.email.deleteMany();
+  await prisma.textMessage.deleteMany();
   await prisma.user.deleteMany();
   await prisma.referral.deleteMany();
 
@@ -149,6 +150,7 @@ export async function seedDemo(prisma: PrismaClient) {
       const sentAt = new Date(Math.min(Date.now() - 60 * 60 * 1000, r.appt.getTime() - SEVEN_DAYS));
       const { subject, bodyHtml } = renderIntakeEmail(ref);
       await prisma.email.create({ data: { to: ref.email, subject, bodyHtml, sentAt, referralId: ref.id } });
+      await prisma.textMessage.create({ data: { to: ref.phone, ...renderIntakeText(ref), sentAt, referralId: ref.id } });
       await prisma.referral.update({ where: { id: ref.id }, data: { emailSentAt: sentAt } });
     }
     if (r.account) {

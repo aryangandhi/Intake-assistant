@@ -24,7 +24,7 @@ export default async function Referrals({ searchParams }: { searchParams: Promis
       />
       {created && (
         <p role="status" className="mb-4 rounded-md border border-green-300 bg-green-50 px-4 py-2 text-green-900">
-          Referral saved for {created.firstName} {created.lastName}. {created.emailSentAt ? "The intake email was sent right away (appointment is within 7 days)." : `The intake email is scheduled for ${formatShort(created.emailScheduledAt)}.`}
+          Referral saved for {created.firstName} {created.lastName}. {created.emailSentAt ? "The intake email was sent right away (appointment is within 7 days), and the text message was sent right away too." : `The intake email and text message are scheduled for ${formatShort(created.emailScheduledAt)}.`}
         </p>
       )}
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">

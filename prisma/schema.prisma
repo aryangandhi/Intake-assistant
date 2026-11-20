@@ -38,6 +38,7 @@ model Referral {
 
   user         User?
   emails       Email[]
+  texts        TextMessage[]
   helpRequests HelpRequest[]
   submissions  IntakeSubmission[]
   documents    EMRDocument[]
@@ -51,6 +52,15 @@ model Email {
   bodyHtml   String
   sentAt     DateTime  @default(now())
   read       Boolean   @default(false)
+  referralId String?
+  referral   Referral? @relation(fields: [referralId], references: [id])
+}
+
+model TextMessage {
+  id         String    @id @default(cuid())
+  to         String // phone number
+  bodyHtml   String
+  sentAt     DateTime  @default(now())
   referralId String?
   referral   Referral? @relation(fields: [referralId], references: [id])
 }
