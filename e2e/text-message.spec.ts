@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// Red tests for spec section 5.2b (simulated patient text message at /messages).
+// Tests for spec section 5.2b (simulated patient text message at /messages).
 // They fail until the feature is built.
 
 const PASSWORD = "password";
@@ -18,20 +18,39 @@ test.beforeEach(async ({ page }) => {
   expect(res.ok()).toBeTruthy();
 });
 
-test("Seeded patient has an intake text message with the same information as the email", async ({ page }) => {
+test("Seeded patient has an intake text message with the exact same information as the email", async ({ page }) => {
   await signInToInbox(page, "jane.doe@example.com");
-  await page.goto("/messages");
+  await page.getByRole("link", { name: /Action needed: Complete your new patient intake form/ }).click();
+  const emailBody = await page.locator("p", { hasText: /Your first appointment at the Cancer Centre is on/ }).locator("xpath=..").innerText();
 
+  await page.goto("/messages");
   const text = page.getByTestId("text-message").first();
   await expect(text).toBeVisible();
-  await expect(text).toContainText("Hi Jane");
-  await expect(text).toContainText(/first appointment is on/i); // date and time
-  await expect(text.getByRole("link", { name: /nurse call/i })).toBeVisible();
-  await expect(text.getByRole("link", { name: /MyConnectedCare|intake form/i })).toBeVisible();
+
+  // Sent from "WRHN Cancer Centre", with no "Cancer Centre:" prefix in the body
+  await expect(text.getByTestId("text-sender")).toHaveText("WRHN Cancer Centre");
+  const body = await text.innerText();
+  expect(body).not.toMatch(/^\s*Cancer Centre:/m);
+
+  // Every paragraph of the email is in the text, word for word
+  const normalise = (t: string) => t.replace(/\s+/g, " ").trim();
+  const paragraphs = emailBody
+    .split("\n")
+    .map(normalise)
+    .filter((l) => l && l !== "Open MyConnectedCare");
+  expect(paragraphs.length).toBeGreaterThan(8);
+  for (const line of paragraphs) expect(normalise(body)).toContain(line);
+
+  // All the email's links are in the text
+  await expect(text.getByRole("link", { name: "Open MyConnectedCare" })).toBeVisible();
+  await expect(text.getByRole("link", { name: /example of a completed form/i })).toBeVisible();
+  await expect(text.getByRole("link", { name: "Request a nurse call" })).toBeVisible();
+  await expect(text).toContainText("Hello Jane");
+  await expect(text).toContainText(/secure online patient portal/i);
+  await expect(text).toContainText(/Start Intake Form/);
   await expect(text).toContainText(/list of your current medications/i);
   // Online intake is offered before the nurse call option
-  const body = await text.innerText();
-  expect(body.search(/intake form/i)).toBeLessThan(body.search(/nurse call/i));
+  expect(body.search(/Open MyConnectedCare/)).toBeLessThan(body.search(/Request a nurse call/));
 });
 
 test("The nurse call link in the text message opens the help request form", async ({ page }) => {
@@ -64,7 +83,7 @@ test("A new referral within 7 days gets a text message right away, along with th
   await signInToInbox(page, "text.patient@example.com");
   await page.goto("/messages");
   await expect(page.getByTestId("text-message")).toHaveCount(1);
-  await expect(page.getByTestId("text-message")).toContainText("Hi Text");
+  await expect(page.getByTestId("text-message")).toContainText("Hello Text");
 });
 
 async function adminOpensNewReferral(page: Page) {
