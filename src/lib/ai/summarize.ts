@@ -4,6 +4,8 @@ import type { RawItem } from "@/lib/answers";
 import { buildTemplateSummary } from "./fallback";
 import { ModelSummarySchema, RESPONSE_JSON_SCHEMA, type CheckedSummary, type ModelSummary, type ValidationReport } from "./schema";
 import { validateSummary } from "./validate";
+import { applyDoseConfirmations } from "./doseConfirmations";
+import { applyNameConfirmations } from "./nameConfirmations";
 
 export const DEFAULT_MODEL = "openai/gpt-4.1-mini";
 
@@ -13,7 +15,7 @@ The data is fictional (class prototype).
 Rules:
 - Use ONLY information in the provided answers. Never infer diagnoses, dates, doses or history that are not stated.
 - Every sentence and bullet must cite at least one field_id (from the input) that supports it, in "citations".
-- Copy medication names, doses, dates and numbers exactly as written.
+- Copy medication names, doses, dates and numbers exactly as written. Never change or "correct" a dose. Never change or "correct" a medication name or its spelling. If a medication entry ends with a note in brackets that starts with "(patient", keep that wording with the entry.
 - Use neutral, factual clinical language. Never use judgmental or loaded wording about the patient (for example "non-compliant", "difficult", "poor historian").
 - If something is unclear, contradictory or missing, add it to "flagged" (with its field_id) instead of guessing. Every incomplete field must appear in "flagged".
 - "paragraph": 3 to 6 sentences written as a History of Present Illness (HPI): open with age, sex (if given) and reason for referral, then relevant history, symptoms, medications and social context.
@@ -83,6 +85,8 @@ export async function generateSummary(items: RawItem[], incomplete: string[]): P
           for (const id of incomplete) {
             if (!out.flagged.some((f) => f.field_id === id)) out.flagged.push({ field_id: id, note: `Not answered: ${getQuestion(id)?.label || id}` });
           }
+          applyDoseConfirmations(out, items);
+          applyNameConfirmations(out, items);
           const { checked, report } = validateSummary(out, refs, knownIds);
           return { content: checked, validation: report, modelUsed: model, isFallback: false };
         }
@@ -96,7 +100,7 @@ export async function generateSummary(items: RawItem[], incomplete: string[]): P
     }
   }
 
-  const tpl = buildTemplateSummary(items, incomplete);
+  const tpl = applyNameConfirmations(applyDoseConfirmations(buildTemplateSummary(items, incomplete), items), items);
   const { checked, report } = validateSummary(tpl, refs, knownIds);
   return { content: checked, validation: report, modelUsed: "Template summary (AI unavailable)", isFallback: true };
 }

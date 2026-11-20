@@ -1,27 +1,44 @@
 "use client";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { submitHelpRequest } from "../actions";
+import { ErrorSummary, InlineError, fieldProps } from "@/components/FormErrors";
+import { formValues, validateHelp, type FieldError } from "@/lib/validation";
 
 type Prefill = { name: string; dob: string; phone: string; language: string };
 const input = "mt-1 w-full rounded-lg border-2 border-gray-500 px-3 py-3 text-lg";
 
 export function HelpForm({ prefill, refId, from }: { prefill: Prefill; refId: string; from: string }) {
-  const [err, action, pending] = useActionState(submitHelpRequest, null);
+  const [state, action, pending] = useActionState(submitHelpRequest, null);
+  const [clientErrors, setClientErrors] = useState<FieldError[] | null>(null);
+  const errors = clientErrors ?? state?.errors ?? [];
   return (
-    <form action={action} className="space-y-5">
+    <form
+      action={action}
+      noValidate
+      onSubmit={(e) => {
+        const errs = validateHelp(formValues(e.currentTarget));
+        setClientErrors(errs.length ? errs : null);
+        if (errs.length) e.preventDefault();
+      }}
+      className="space-y-5"
+    >
+      <ErrorSummary errors={errors} />
       <input type="hidden" name="ref" value={refId} />
       <input type="hidden" name="from" value={from} />
       <div>
         <label htmlFor="name" className="block text-lg font-semibold">Your full name</label>
-        <input id="name" name="name" required defaultValue={prefill.name} className={input} />
+        <input id="name" name="name" {...fieldProps(errors, "name")} defaultValue={prefill.name} className={input} />
+        <InlineError errors={errors} id="name" />
       </div>
       <div>
         <label htmlFor="dob" className="block text-lg font-semibold">Date of birth</label>
-        <input id="dob" name="dob" type="date" required defaultValue={prefill.dob} className={input} />
+        <input id="dob" name="dob" type="date" {...fieldProps(errors, "dob")} defaultValue={prefill.dob} className={input} />
+        <InlineError errors={errors} id="dob" />
       </div>
       <div>
         <label htmlFor="phone" className="block text-lg font-semibold">Phone number we should call</label>
-        <input id="phone" name="phone" type="tel" required defaultValue={prefill.phone} className={input} />
+        <input id="phone" name="phone" type="tel" {...fieldProps(errors, "phone")} defaultValue={prefill.phone} className={input} />
+        <InlineError errors={errors} id="phone" />
       </div>
       <div>
         <label htmlFor="language" className="block text-lg font-semibold">Preferred language</label>
@@ -44,7 +61,6 @@ export function HelpForm({ prefill, refId, from }: { prefill: Prefill; refId: st
         </label>
         <textarea id="notes" name="notes" rows={3} className={input} />
       </div>
-      {err && <p role="alert" className="text-lg font-medium text-red-700">{err}</p>}
       <button disabled={pending} className="w-full rounded-lg bg-teal-800 px-5 py-3 text-xl font-bold text-white hover:bg-teal-900 disabled:opacity-60">
         Request a nurse call
       </button>
