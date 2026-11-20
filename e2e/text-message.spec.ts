@@ -80,6 +80,17 @@ test("A new referral within 7 days gets a text message right away, along with th
   await expect(ia.getByText(/intake email was sent right away/)).toBeVisible();
   await expect(ia.getByText(/text message was sent right away/i)).toBeVisible();
 
+  // The nurse checks the intake status and sees that both messages were sent.
+  const nurse = await context.newPage();
+  await nurse.goto("/intake-assistant");
+  await nurse.getByLabel(/email/i).first().fill("nurse@wrhn-demo.ca");
+  await nurse.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await nurse.getByRole("button", { name: /log in|sign in/i }).click();
+  await nurse.goto("/intake-assistant/upcoming");
+  const nurseRow = nurse.getByRole("row", { name: /Patient, Text/ });
+  await expect(nurseRow.getByText("Email and Text Message sent")).toBeVisible();
+  await nurse.screenshot({ path: "docs/screenshots/nurse-upcoming-email-and-text-sent.png", fullPage: true });
+
   await signInToInbox(page, "text.patient@example.com");
   await page.goto("/messages");
   await expect(page.getByTestId("text-message")).toHaveCount(1);
