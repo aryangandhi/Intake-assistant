@@ -85,7 +85,7 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
   - Because we can't wait a week during a demo, add a **"Send intake email now (demo)"** button.
   - Also send immediately if the appointment is 7 days away or less.
 - **Text message:** the intake text message (see 5.2b) is sent at the same time as the intake email, on the same schedule, by the same **"Send intake email now (demo)"** button, and immediately under the same 7-day rule. Because email and phone are both required, every intake is sent as both an email and a text message, never one without the other. The demo button sends both, and after saving a referral that is due now, the admin sees a confirmation that the email and the text message were sent.
-- **Referral list** with status chips for each referral.
+- **Referral list** with status chips for each referral. Once the intake email has been sent, the status chip says **"Email and Text Message sent"** (not just "Email sent"), because the email and the text message always go out together.
 - This screen is mainly used to *explain* where the email comes from. Scenario cards start from the patient inbox, so the seeded Jane Doe referral must already have an email sent.
 
 ### 5.2 Patient email inbox (simulated)
@@ -167,6 +167,7 @@ Some patients do not check email often and may miss their appointment and intake
   - On submit, `completed_by = nurse`, and the same AI summary pipeline runs (section 6), sending the result to the EMR.
   - The help request is marked `completed`.
 - **Upcoming intakes list:** all referrals with appointment dates and status. A nurse can see who has completed the form online, who requested a call and who hasn't done anything yet.
+  - Nurses are the ones who check the digital intake form status, so this list must show clearly that both messages went out: after the intake has been sent, the status says **"Email and Text Message sent"**, so the nurse knows the patient received both. The e2e screenshot for this is taken from the nurse's login (this list), not the admin's.
 
 ### 5.6 Intake Assistant: co-op student flow (non-tech solution)
 
