@@ -1,6 +1,6 @@
 const LABELS: Record<string, { label: string; cls: string }> = {
   referral_entered: { label: "Referral entered", cls: "bg-gray-100 text-gray-800 border-gray-300" },
-  email_sent: { label: "Email sent", cls: "bg-blue-50 text-blue-800 border-blue-300" },
+  email_sent: { label: "Email and Text Message sent", cls: "bg-blue-50 text-blue-800 border-blue-300" },
   in_progress: { label: "Form in progress", cls: "bg-amber-50 text-amber-900 border-amber-300" },
   submitted: { label: "Completed online", cls: "bg-green-50 text-green-800 border-green-300" },
   help_requested: { label: "Nurse call requested", cls: "bg-rose-50 text-rose-800 border-rose-300" },

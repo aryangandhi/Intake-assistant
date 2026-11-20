@@ -60,7 +60,7 @@ test("The nurse call link in the text message opens the help request form", asyn
   await expect(page).toHaveURL(/request-help/);
 });
 
-test("A new referral within 7 days gets a text message right away, along with the email", async ({ page, context }) => {
+test("A new referral within 7 days gets a text message right away, along with the email", async ({ page, context, browser }) => {
   const ia = await context.newPage();
   await ia.goto("/intake-assistant");
   await ia.getByLabel(/email/i).first().fill("admin@wrhn-demo.ca");
@@ -81,12 +81,13 @@ test("A new referral within 7 days gets a text message right away, along with th
   await expect(ia.getByText(/text message was sent right away/i)).toBeVisible();
 
   // The nurse checks the intake status and sees that both messages were sent.
-  const nurse = await context.newPage();
+  const nurse = await (await browser.newContext({ baseURL: "http://localhost:3000" })).newPage(); // separate login
   await nurse.goto("/intake-assistant");
   await nurse.getByLabel(/email/i).first().fill("nurse@wrhn-demo.ca");
   await nurse.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await nurse.getByRole("button", { name: /log in|sign in/i }).click();
-  await nurse.goto("/intake-assistant/upcoming");
+  await nurse.getByRole("link", { name: "Upcoming intakes" }).click();
+  await expect(nurse.getByRole("heading", { name: "Upcoming intakes" })).toBeVisible();
   const nurseRow = nurse.getByRole("row", { name: /Patient, Text/ });
   await expect(nurseRow.getByText("Email and Text Message sent")).toBeVisible();
   await nurse.screenshot({ path: "docs/screenshots/nurse-upcoming-email-and-text-sent.png", fullPage: true });
