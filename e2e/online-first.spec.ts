@@ -49,3 +49,26 @@ test("Text message: online intake comes before the nurse call option", async ({ 
 
   await page.screenshot({ path: "docs/screenshots/text-online-first.png", fullPage: true });
 });
+
+test("Email: explains MyConnectedCare is a patient portal, before the online steps", async ({ page }) => {
+  await signInToInbox(page, "jane.doe@example.com");
+  await page.getByRole("link", { name: /Action needed: Complete your new patient intake form/ }).click();
+
+  // A short plain paragraph for patients who have never heard of MyConnectedCare
+  const intro = page.locator("p", { hasText: /MyConnectedCare is the Cancer Centre's secure online patient portal/i });
+  await expect(intro).toBeVisible();
+  await expect(intro).toContainText(/forms/i);
+  await expect(intro).toContainText(/appointments/i);
+  await expect(intro).toContainText(/message your care team/i);
+
+  // Plain text, not bold
+  const weight = await intro.evaluate((el) => parseInt(getComputedStyle(el).fontWeight, 10));
+  expect(weight).toBeLessThan(600);
+
+  // Between the opening paragraph and the "How to complete the form online" heading
+  const opening = page.locator("p", { hasText: /Your first appointment at the Cancer Centre is on/ });
+  const steps = page.getByText("How to complete the form online:");
+  const y = async (l: typeof intro) => (await l.boundingBox())!.y;
+  expect(await y(opening)).toBeLessThan(await y(intro));
+  expect(await y(intro)).toBeLessThan(await y(steps));
+});
