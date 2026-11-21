@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Question } from "@/config/intakeQuestions";
 import type { AnswerValue, RepeatValue } from "@/lib/answers";
-import { CONFIRM_KEY, DOSE_WRONG_KEY, NAME_CONFIRM_KEY, NAME_ORIGINAL_KEY, NAME_WRONG_KEY, checkMedication, checkMedicationName, confirmationQuestion, isConfirmedUnusual, isDoseMarkedWrong, isNameConfirmed, isNameMarkedWrong, medSignature, nameConfirmationQuestion } from "@/lib/medicationCheck";
+import { CONFIRM_KEY, DOSE_WRONG_KEY, NAME_CONFIRM_KEY, NAME_ORIGINAL_KEY, NAME_WRONG_KEY, checkMedication, checkMedicationName, doseText, isDoseIncomplete, missingDoseNotice, confirmationQuestion, isConfirmedUnusual, isDoseMarkedWrong, isNameConfirmed, isNameMarkedWrong, medSignature, nameConfirmationQuestion } from "@/lib/medicationCheck";
 
 type SR = {
   lang: string;
@@ -375,21 +375,41 @@ export function QuestionInput({
                           </label>
                           <div>
                             <div className="flex gap-2">
-                              <input
-                                id={fid}
-                                className={base}
-                                onBlur={() => {
-                                  if (q.id !== "med_list") return;
-                                  setCheckedRows((c) => ({ ...c, [idx]: true }));
-                                  if (f.id === "name") setCheckedNames((c) => ({ ...c, [idx]: true }));
-                                }}
-                                value={it[f.id] || ""}
-                                onChange={(e) => {
-                                  const next = items.map((x, j) => (j === idx ? withNameEdit(x, idx, f.id, e.target.value) : x));
-                                  set({ none: false, items: next });
-                                }}
-                              />
-                              {voice && !dense && (
+                              {f.options ? (
+                                <select
+                                  id={fid}
+                                  className={base}
+                                  onBlur={() => {
+                                    if (q.id === "med_list") setCheckedRows((c) => ({ ...c, [idx]: true }));
+                                  }}
+                                  value={it[f.id] || ""}
+                                  onChange={(e) => {
+                                    const next = items.map((x, j) => (j === idx ? withNameEdit(x, idx, f.id, e.target.value) : x));
+                                    set({ none: false, items: next });
+                                  }}
+                                >
+                                  <option value="">{dense ? "—" : "Choose a unit"}</option>
+                                  {f.options.map((o) => (
+                                    <option key={o} value={o}>{o}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  id={fid}
+                                  className={base}
+                                  onBlur={() => {
+                                    if (q.id !== "med_list") return;
+                                    setCheckedRows((c) => ({ ...c, [idx]: true }));
+                                    if (f.id === "name") setCheckedNames((c) => ({ ...c, [idx]: true }));
+                                  }}
+                                  value={it[f.id] || ""}
+                                  onChange={(e) => {
+                                    const next = items.map((x, j) => (j === idx ? withNameEdit(x, idx, f.id, e.target.value) : x));
+                                    set({ none: false, items: next });
+                                  }}
+                                />
+                              )}
+                              {voice && !dense && !f.options && (
                                 <MicButton
                                   label={`${f.label} ${idx + 1}`}
                                   value={it[f.id] || ""}
@@ -449,8 +469,13 @@ export function QuestionInput({
                       </div>
                     );
                   })()}
+                  {q.id === "med_list" && (checkAllMeds || checkedRows[idx]) && isDoseIncomplete(it) && (
+                    <p data-testid="dose-gap" className={`mt-2 w-full basis-full rounded-lg border border-amber-600 bg-amber-50 text-gray-900 ${dense ? "p-1 text-xs" : "p-2 text-lg"}`}>
+                      {missingDoseNotice(it)} for {it.name?.trim()}, so your care team has the full dose.
+                    </p>
+                  )}
                   {q.id === "med_list" && (checkAllMeds || checkedRows[idx]) && (() => {
-                    const w = checkMedication(it.name || "", it.dose || "", it.frequency || "");
+                    const w = checkMedication(it.name || "", doseText(it), it.frequency || "");
                     if (!w || isConfirmedUnusual(it) || isDoseMarkedWrong(it)) return null;
                     const setRow = (patch: Record<string, string>) => set({ none: false, items: items.map((x, j) => (j === idx ? { ...x, ...patch } : x)) });
                     return (

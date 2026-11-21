@@ -28,9 +28,9 @@ export const EXAMPLE_ANSWERS: Answers = {
   al_list: { items: [{ allergen: "Penicillin", reaction: "Hives and itchy skin" }] },
   med_list: {
     items: [
-      { name: "Metformin", dose: "500 mg", frequency: "twice a day" },
-      { name: "Ramipril", dose: "10 mg", frequency: "once a day in the morning" },
-      { name: "Vitamin D", dose: "1000 IU", frequency: "once a day" },
+      { name: "Metformin", dose: "500", unit: "mg", frequency: "twice a day" },
+      { name: "Ramipril", dose: "10", unit: "mg", frequency: "once a day in the morning" },
+      { name: "Vitamin D", dose: "1000", unit: "IU", frequency: "once a day" },
     ],
   },
   mh_has: "Yes",
