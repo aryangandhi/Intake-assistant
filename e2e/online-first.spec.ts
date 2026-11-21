@@ -40,8 +40,8 @@ test("Text message: online intake comes before the nurse call option", async ({ 
   await signInToInbox(page, "jane.doe@example.com");
   await page.goto("/messages");
   const text = page.getByTestId("text-message").first();
-  const online = text.getByRole("link", { name: /complete your intake form online/i });
-  const nurse = text.getByRole("link", { name: /nurse call/i });
+  const online = text.getByRole("link", { name: "Open MyConnectedCare" });
+  const nurse = text.getByRole("link", { name: "Request a nurse call" });
   await expect(online).toBeVisible();
   await expect(nurse).toBeVisible();
   expect((await online.boundingBox())!.y * 10000 + (await online.boundingBox())!.x)

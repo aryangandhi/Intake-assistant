@@ -22,9 +22,11 @@ export function renderIntakeEmail(r: { id: string; firstName: string; appointmen
 export function renderIntakeText(r: { id: string; firstName: string; appointmentAt: Date }) {
   const vars = {
     firstName: r.firstName,
+    date: formatDate(r.appointmentAt),
     dateTime: formatDateTime(r.appointmentAt),
     portalUrl: `/myconnectedcare/open?ref=${r.id}`,
     helpUrl: `/intake-assistant/request-help?ref=${r.id}`,
+    exampleUrl: "/myconnectedcare/example",
   };
   return { bodyHtml: fill(INTAKE_TEXT_HTML, vars) };
 }
