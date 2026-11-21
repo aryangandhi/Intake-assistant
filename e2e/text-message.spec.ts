@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// Red tests for spec section 5.2b (simulated patient text message at /messages).
+// Tests for spec section 5.2b (simulated patient text message at /messages).
 // They fail until the feature is built.
 
 const PASSWORD = "password";
@@ -18,20 +18,39 @@ test.beforeEach(async ({ page }) => {
   expect(res.ok()).toBeTruthy();
 });
 
-test("Seeded patient has an intake text message with the same information as the email", async ({ page }) => {
+test("Seeded patient has an intake text message with the exact same information as the email", async ({ page }) => {
   await signInToInbox(page, "jane.doe@example.com");
-  await page.goto("/messages");
+  await page.getByRole("link", { name: /Action needed: Complete your new patient intake form/ }).click();
+  const emailBody = await page.locator("p", { hasText: /Your first appointment at the Cancer Centre is on/ }).locator("xpath=..").innerText();
 
+  await page.goto("/messages");
   const text = page.getByTestId("text-message").first();
   await expect(text).toBeVisible();
-  await expect(text).toContainText("Hi Jane");
-  await expect(text).toContainText(/first appointment is on/i); // date and time
-  await expect(text.getByRole("link", { name: /nurse call/i })).toBeVisible();
-  await expect(text.getByRole("link", { name: /MyConnectedCare|intake form/i })).toBeVisible();
+
+  // Sent from "WRHN Cancer Centre", with no "Cancer Centre:" prefix in the body
+  await expect(text.getByTestId("text-sender")).toHaveText("WRHN Cancer Centre");
+  const body = await text.innerText();
+  expect(body).not.toMatch(/^\s*Cancer Centre:/m);
+
+  // Every paragraph of the email is in the text, word for word
+  const normalise = (t: string) => t.replace(/\s+/g, " ").trim();
+  const paragraphs = emailBody
+    .split("\n")
+    .map(normalise)
+    .filter((l) => l && l !== "Open MyConnectedCare");
+  expect(paragraphs.length).toBeGreaterThan(8);
+  for (const line of paragraphs) expect(normalise(body)).toContain(line);
+
+  // All the email's links are in the text
+  await expect(text.getByRole("link", { name: "Open MyConnectedCare" })).toBeVisible();
+  await expect(text.getByRole("link", { name: /example of a completed form/i })).toBeVisible();
+  await expect(text.getByRole("link", { name: "Request a nurse call" })).toBeVisible();
+  await expect(text).toContainText("Hello Jane");
+  await expect(text).toContainText(/secure online patient portal/i);
+  await expect(text).toContainText(/Start Intake Form/);
   await expect(text).toContainText(/list of your current medications/i);
   // Online intake is offered before the nurse call option
-  const body = await text.innerText();
-  expect(body.search(/intake form/i)).toBeLessThan(body.search(/nurse call/i));
+  expect(body.search(/Open MyConnectedCare/)).toBeLessThan(body.search(/Request a nurse call/));
 });
 
 test("The nurse call link in the text message opens the help request form", async ({ page }) => {
@@ -41,7 +60,7 @@ test("The nurse call link in the text message opens the help request form", asyn
   await expect(page).toHaveURL(/request-help/);
 });
 
-test("A new referral within 7 days gets a text message right away, along with the email", async ({ page, context }) => {
+test("A new referral within 7 days gets a text message right away, along with the email", async ({ page, context, browser }) => {
   const ia = await context.newPage();
   await ia.goto("/intake-assistant");
   await ia.getByLabel(/email/i).first().fill("admin@wrhn-demo.ca");
@@ -61,10 +80,22 @@ test("A new referral within 7 days gets a text message right away, along with th
   await expect(ia.getByText(/intake email was sent right away/)).toBeVisible();
   await expect(ia.getByText(/text message was sent right away/i)).toBeVisible();
 
+  // The nurse checks the intake status and sees that both messages were sent.
+  const nurse = await (await browser.newContext({ baseURL: "http://localhost:3000" })).newPage(); // separate login
+  await nurse.goto("/intake-assistant");
+  await nurse.getByLabel(/email/i).first().fill("nurse@wrhn-demo.ca");
+  await nurse.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await nurse.getByRole("button", { name: /log in|sign in/i }).click();
+  await nurse.getByRole("link", { name: "Upcoming intakes" }).click();
+  await expect(nurse.getByRole("heading", { name: "Upcoming intakes" })).toBeVisible();
+  const nurseRow = nurse.getByRole("row", { name: /Patient, Text/ });
+  await expect(nurseRow.getByText("Email and Text Message sent")).toBeVisible();
+  await nurse.screenshot({ path: "docs/screenshots/nurse-upcoming-email-and-text-sent.png", fullPage: true });
+
   await signInToInbox(page, "text.patient@example.com");
   await page.goto("/messages");
   await expect(page.getByTestId("text-message")).toHaveCount(1);
-  await expect(page.getByTestId("text-message")).toContainText("Hi Text");
+  await expect(page.getByTestId("text-message")).toContainText("Hello Text");
 });
 
 async function adminOpensNewReferral(page: Page) {
