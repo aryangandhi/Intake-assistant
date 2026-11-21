@@ -6,10 +6,11 @@ export const dynamic = "force-dynamic";
 const cards = [
   {
     title: "Patient",
-    desc: "Email inbox and the MyConnectedCare patient portal.",
+    desc: "Email inbox, text messages and the MyConnectedCare patient portal.",
     links: [
       { href: "/inbox", label: "Patient email inbox" },
       { href: "/myconnectedcare", label: "MyConnectedCare (prototype)" },
+      { href: "/messages", label: "Text messages" },
     ],
     cls: "border-teal-600",
   },

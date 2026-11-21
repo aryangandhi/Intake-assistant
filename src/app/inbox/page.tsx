@@ -19,7 +19,6 @@ function MailHeader({ email }: { email?: string }) {
       </div>
       {email && (
         <form action={inboxLogout} className="flex items-center gap-3 text-sm">
-          <Link href="/messages" className="underline">Text messages</Link>
           <span className="hidden sm:inline"><Email value={email} /></span>
           <button className="rounded border border-slate-400 px-2 py-1 hover:bg-slate-700">Sign out</button>
         </form>
