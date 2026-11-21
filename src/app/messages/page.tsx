@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { formatShort } from "@/lib/answers";
+import { INTAKE_TEXT_SENDER } from "@/content/intakeText";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Text messages (simulated)" };
@@ -30,8 +31,9 @@ export default async function MessagesPage() {
             {texts.length === 0 && <p className="text-gray-600">No text messages yet.</p>}
             <ul className="space-y-4">
               {texts.map((t) => (
-                <li key={t.id} data-testid="text-message" className="rounded-2xl rounded-bl-sm bg-white p-4 text-lg shadow">
-                  <div dangerouslySetInnerHTML={{ __html: t.bodyHtml.replace(/<a /g, '<a class="text-blue-800 underline" ') }} />
+                <li key={t.id} data-testid="text-message" className="rounded-2xl rounded-bl-sm bg-white p-4 shadow">
+                  <p data-testid="text-sender" className="mb-2 text-sm font-semibold text-gray-700">{INTAKE_TEXT_SENDER}</p>
+                  <div className="email-body space-y-3 text-base [&_ol]:list-decimal [&_ol]:pl-6" dangerouslySetInnerHTML={{ __html: t.bodyHtml.replace(/<a (?![^>]*email-button)/g, '<a class="text-blue-800 underline" ') }} />
                   <p className="mt-2 text-xs text-gray-500">{formatShort(t.sentAt)}</p>
                 </li>
               ))}

@@ -33,9 +33,9 @@ const MARGARET_ANSWERS: Answers = {
   al_list: { items: [{ allergen: "Sulfa drugs", reaction: "Rash" }] },
   med_list: {
     items: [
-      { name: "Amlodipine", dose: "5 mg", frequency: "once a day" },
-      { name: "Atorvastatin", dose: "20 mg", frequency: "once a day at bedtime" },
-      { name: "Acetaminophen", dose: "500 mg", frequency: "as needed for pain, up to 3 times a day" },
+      { name: "Amlodipine", dose: "5", unit: "mg", frequency: "once a day" },
+      { name: "Atorvastatin", dose: "20", unit: "mg", frequency: "once a day at bedtime" },
+      { name: "Acetaminophen", dose: "500", unit: "mg", frequency: "as needed for pain, up to 3 times a day" },
     ],
   },
   mh_has: "Yes",

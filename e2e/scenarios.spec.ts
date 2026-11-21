@@ -13,6 +13,12 @@ async function loginWith(page: Page, email: string) {
   await page.getByRole("button", { name: /log in|sign in/i }).click();
 }
 
+/** Medication dose and unit are separate boxes: a number and a drop-down. */
+async function fillDose(page: Page, row: number, dose: string, unit: string) {
+  await page.locator(`#in-med_list-${row}-dose`).fill(dose);
+  await page.locator(`#in-med_list-${row}-unit`).selectOption(unit);
+}
+
 async function openFromEmail(context: BrowserContext, page: Page, linkName: RegExp) {
   const [popup] = await Promise.all([context.waitForEvent("page"), page.getByRole("link", { name: linkName }).click()]);
   await popup.waitForLoadState();
@@ -77,7 +83,7 @@ test("Scenario 1: patient completes the form online, oncologist reviews it", asy
   await mcc.getByRole("button", { name: "Next →" }).click();
 
   await mcc.locator("#in-med_list").fill("Metformin");
-  await mcc.locator("#in-med_list-0-dose").fill("500 mg");
+  await fillDose(mcc, 0, "500", "mg");
   await mcc.locator("#in-med_list-0-frequency").fill("twice a day");
   await mcc.getByRole("button", { name: "Next →" }).click();
 
@@ -134,7 +140,7 @@ test("Scenario 2: patient requests a nurse call, nurse completes the PowerForm",
   await ia.locator("#in-mc_reason").fill("Abnormal mammogram in October 2026, biopsy confirmed breast cancer.");
   await ia.locator("#in-al_has").selectOption("No");
   await ia.locator("#in-med_list").fill("Levothyroxine");
-  await ia.locator("#in-med_list-0-dose").fill("50 mcg");
+  await fillDose(ia, 0, "50", "mcg");
   await ia.locator("#in-med_list-0-frequency").fill("once daily");
   await ia.locator("#in-vs_hr").fill("72");
   await ia.getByRole("button", { name: "Submit and send to EMR" }).click();
@@ -459,29 +465,29 @@ test("Unusual medication dose asks \"Are you sure?\", including when saving or m
     await mcc.getByRole("button", { name: "Next →" }).click();
   }
   await mcc.locator("#in-med_list").fill("Metformin");
-  await mcc.locator("#in-med_list-0-dose").fill("100 g/day");
+  await fillDose(mcc, 0, "100", "g");
   await mcc.locator("#in-med_list-0-frequency").click(); // leaves the dose box
   const warning = mcc.getByTestId("med-warning");
-  await expect(warning).toContainText("Are you sure about your dose of Metformin 100 g/day?");
+  await expect(warning).toContainText("Are you sure about your dose of Metformin 100 g?");
 
   // Leaving without answering: Save and Next both stop on the question instead.
-  await mcc.locator("#in-med_list-0-dose").fill("200 g/day");
+  await fillDose(mcc, 0, "200", "g");
   await mcc.getByRole("button", { name: "Save and finish later" }).click();
-  await expect(warning).toContainText("Metformin 200 g/day");
+  await expect(warning).toContainText("Metformin 200 g");
   await expect(mcc).toHaveURL(/questionnaires\/intake/);
   await mcc.getByRole("button", { name: "Next →" }).click();
   await expect(warning).toHaveCount(1);
-  await mcc.locator("#in-med_list-0-dose").fill("100 g/day");
+  await fillDose(mcc, 0, "100", "g");
 
   // "No" focuses the dose box; a normal dose clears the notice.
   await warning.getByRole("button", { name: "No", exact: true }).click();
   await expect(mcc.locator("#in-med_list-0-dose")).toBeFocused();
-  await mcc.locator("#in-med_list-0-dose").fill("500 mg");
+  await fillDose(mcc, 0, "500", "mg");
   await mcc.locator("#in-med_list-0-frequency").fill("twice a day");
   await expect(warning).toHaveCount(0);
 
   // "No" without fixing the dose hides the question and still lets the form move on.
-  await mcc.locator("#in-med_list-0-dose").fill("300 g/day");
+  await fillDose(mcc, 0, "300", "g");
   await mcc.locator("#in-med_list-0-frequency").click();
   await warning.getByRole("button", { name: "No", exact: true }).click();
   await expect(warning).toHaveCount(0);
@@ -491,13 +497,13 @@ test("Unusual medication dose asks \"Are you sure?\", including when saving or m
   await expect(mcc.locator("#in-med_list")).toBeVisible();
 
   // "Yes" dismisses it, and the form still moves on. Editing the dose afterwards asks again.
-  await mcc.locator("#in-med_list-0-dose").fill("100 g/day");
+  await fillDose(mcc, 0, "100", "g");
   await mcc.locator("#in-med_list-0-frequency").click();
   await mcc.getByRole("button", { name: "Yes", exact: true }).click();
   await expect(warning).toHaveCount(0);
-  await mcc.locator("#in-med_list-0-dose").fill("200 g/day");
+  await fillDose(mcc, 0, "200", "g");
   await mcc.locator("#in-med_list-0-frequency").click();
-  await expect(warning).toContainText("Metformin 200 g/day");
+  await expect(warning).toContainText("Metformin 200 g");
   await mcc.getByRole("button", { name: "Yes", exact: true }).click();
   await mcc.getByRole("button", { name: "Next →" }).click();
 });
@@ -516,15 +522,15 @@ test("Confirmed unusual dose reaches the oncologist's summary, flags and clinic 
 
   // Two medications: one normal, one unusual that the patient confirms with Yes.
   await mcc.locator("#in-med_list").fill("Ramipril");
-  await mcc.locator("#in-med_list-0-dose").fill("10 mg");
+  await fillDose(mcc, 0, "10", "mg");
   await mcc.locator("#in-med_list-0-frequency").fill("once a day");
   await mcc.getByRole("button", { name: "+ Add another" }).click();
   await mcc.locator("#in-med_list-1-name").fill("Metformin");
-  await mcc.locator("#in-med_list-1-dose").fill("100 g/day");
+  await fillDose(mcc, 1, "100", "g");
   await mcc.locator("#in-med_list-1-frequency").fill("once a day");
   await mcc.locator("#in-med_list-1-frequency").blur();
   await expect(mcc.getByTestId("med-warning")).toHaveCount(1);
-  await expect(mcc.getByTestId("med-warning")).toContainText("Are you sure about your dose of Metformin 100 g/day/once a day?");
+  await expect(mcc.getByTestId("med-warning")).toContainText("Are you sure about your dose of Metformin 100 g/once a day?");
   await mcc.getByRole("button", { name: "Yes", exact: true }).click();
   await expect(mcc.getByTestId("med-warning")).toHaveCount(0);
 
@@ -539,14 +545,14 @@ test("Confirmed unusual dose reaches the oncologist's summary, flags and clinic 
   const emr = await context.newPage();
   await oncologistOpensLatestIntake(emr, "Doe, Jane");
   await expect(emr.getByText("AI Summary (paragraph)")).toBeVisible({ timeout: 30_000 });
-  await expect(emr.locator("#raw-med_list")).toContainText("Metformin, 100 g/day, once a day (patient confirmed this unusual dose)");
+  await expect(emr.locator("#raw-med_list")).toContainText("Metformin, 100 g, once a day (patient confirmed this unusual dose)");
   await expect(emr.locator("#raw-med_list")).toContainText("Ramipril, 10 mg, once a day");
   await expect(emr.locator("#raw-med_list")).not.toContainText("Ramipril, 10 mg, once a day (patient confirmed");
-  await expect(emr.getByText(/Patient confirmed this dose as correct when asked "Are you sure\?": Metformin, 100 g\/day, once a day/).first()).toBeVisible();
+  await expect(emr.getByText(/Patient confirmed this dose as correct when asked "Are you sure\?": Metformin, 100 g, once a day/).first()).toBeVisible();
   await expect(emr.getByRole("button", { name: /Unusual dose confirmed by patient: Metformin/ })).toBeVisible();
 
   await emr.getByRole("button", { name: "Copy to clinic note" }).click();
-  await expect(emr.locator("#currentMedications")).toHaveValue(/Metformin, 100 g\/day, once a day.*Please verify/s);
+  await expect(emr.locator("#currentMedications")).toHaveValue(/Metformin, 100 g, once a day.*Please verify/s);
 });
 
 const SHOTS = process.env.SHOTS_DIR || "test-results/shots";
@@ -569,7 +575,7 @@ test("Unusual medication name asks about the spelling, with suggestions, and pau
   const mcc = await openMedicationsStep(page, context);
   await mcc.locator("#in-med_list").fill("meform");
   await expect(mcc.getByTestId("name-warning")).toHaveCount(0); // waits until they leave the name box
-  await mcc.locator("#in-med_list-0-dose").fill("500 mg");
+  await fillDose(mcc, 0, "500", "mg");
   const warning = mcc.getByTestId("name-warning");
   await expect(warning).toContainText("Are you sure about the medication's spelling?");
   await expect(warning.getByTestId("name-suggestion").first()).toHaveText("Metformin");
@@ -609,13 +615,13 @@ test("Spelling outcome (corrected, kept as typed) reaches the oncologist's summa
 
   // Row 1: typo fixed by clicking the suggestion. Row 2: unusual spelling kept with Yes.
   await mcc.locator("#in-med_list").fill("meform");
-  await mcc.locator("#in-med_list-0-dose").fill("500 mg");
+  await fillDose(mcc, 0, "500", "mg");
   await mcc.locator("#in-med_list-0-frequency").fill("twice a day");
   await mcc.getByTestId("name-suggestion").first().click();
   await expect(mcc.locator("#in-med_list")).toHaveValue("Metformin");
   await mcc.getByRole("button", { name: "+ Add another" }).click();
   await mcc.locator("#in-med_list-1-name").fill("Ramipryl");
-  await mcc.locator("#in-med_list-1-dose").fill("10 mg");
+  await fillDose(mcc, 1, "10", "mg");
   await mcc.locator("#in-med_list-1-frequency").fill("daily");
   await mcc.getByTestId("name-yes").click();
   await expect(mcc.getByTestId("name-warning")).toHaveCount(0);

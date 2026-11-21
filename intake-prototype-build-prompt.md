@@ -85,13 +85,14 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
   - Because we can't wait a week during a demo, add a **"Send intake email now (demo)"** button.
   - Also send immediately if the appointment is 7 days away or less.
 - **Text message:** the intake text message (see 5.2b) is sent at the same time as the intake email, on the same schedule, by the same **"Send intake email now (demo)"** button, and immediately under the same 7-day rule. Because email and phone are both required, every intake is sent as both an email and a text message, never one without the other. The demo button sends both, and after saving a referral that is due now, the admin sees a confirmation that the email and the text message were sent.
-- **Referral list** with status chips for each referral.
+- **Referral list** with status chips for each referral. Once the intake email has been sent, the status chip says **"Email and Text Message sent"** (not just "Email sent"), because the email and the text message always go out together.
 - This screen is mainly used to *explain* where the email comes from. Scenario cards start from the patient inbox, so the seeded Jane Doe referral must already have an email sent.
 
 ### 5.2 Patient email inbox (simulated)
 
 - A simple webmail-style inbox: a list of emails on one side, the open email on the other. Patients log in with the same demo patient account, or pick a patient on the inbox page.
 - **The intake email** contains the items below. Use the default draft that follows, and keep the email text in one editable template file so our team can replace the wording later without touching code.
+  - **A brief statement of what MyConnectedCare is**, placed as its own short plain paragraph directly under the opening paragraph (the one with the appointment date and time) and directly above the "How to complete the form online" heading, so patients read what the portal is before they are told to log in or sign up. Not inside a box or card, not bold. It says it is the hospital's secure patient portal, where patients can complete forms, see appointments and message their care team. Written for new patients who have never used it (a patient told us she did not know about MyConnectedCare until after her first oncology appointment). Keep it short and not bold.
   - **First**, the online intake option: step-by-step instructions (1) click the link to log in or sign up for MyConnectedCare, (2) click **Questionnaires** on the left, (3) click **Start Intake Form**, followed by a button linking to MyConnectedCare. Patients should be encouraged to complete the intake themselves online.
   - **Below** the online instructions, the option to have a nurse call them instead: a link to "Prefer to do this over the phone? Request a nurse call." It must stay clearly available, but must **not** be bold, large or placed first. Peer feedback: when it was bolded at the top, patients skimming the email read it as the preferred option and picked it without seeing the online option.
   - A link to an **example completed form** (see 5.3).
@@ -104,6 +105,8 @@ MyConnectedCare should also support **sign up**, since the email says "log in or
 > Hello {first name},
 >
 > Your first appointment at the Cancer Centre is on {date, time}. Before then, please complete your new patient intake form online. It takes about 20 to 30 minutes and you can save and come back later.
+>
+> MyConnectedCare is the Cancer Centre's secure online patient portal, where you can complete forms, see your appointments and message your care team. If you have not used it before, you can sign up using the button below.
 >
 > How to complete the form online: 1) Click the button below to log in or sign up for MyConnectedCare. 2) Click "Questionnaires" on the left. 3) Click "Start Intake Form".
 >
@@ -121,15 +124,11 @@ Some patients do not check email often and may miss their appointment and intake
 
 - The text is sent to the phone number on the referral, always together with the email.
 - A simple phone-style view at `/messages`, listing the text messages received by the logged-in demo patient. Nothing is actually sent.
-- **The text message** carries the same information as the email, in short form:
-  - The appointment date and time.
-  - The link to MyConnectedCare to complete the intake online, **first**, as in the email.
-  - The **Request a nurse call** option, after the online option (not first, not emphasised), as in the email.
-  - A reminder to complete the form before the appointment and to bring an official list of current medications.
-- Keep the text wording in one editable template file (for example `src/content/intakeText.ts`), like the email.
+- **The text message is the same message as the email.** Copy the email body into the text message word for word: the same paragraphs, the "What MyConnectedCare is" paragraph, the three online steps, the MyConnectedCare link, the example form link, the Request a nurse call link, the due date, the medications reminder and the sign-off. Nothing is shortened, left out or reworded, so a patient who only reads the text gets exactly the same information as one who reads the email. The only difference is the email's "Open MyConnectedCare" button, which in a text is a plain link with the same words. The online option still comes first and the nurse call option after it, not emphasised. (Peer feedback: the text message should contain the exact same information as the email.)
+- **The sender is "WRHN Cancer Centre"**, shown as the sender name at the top of each text message, instead of just "Cancer Centre". There is no "Cancer Centre:" prefix inside the message body. (Peer feedback.) The email wording is unchanged.
+- Keep the text wording in one editable template file (for example `src/content/intakeText.ts`), like the email. If the email wording changes later, the text must be updated to match.
 
-**Default text message draft:**
-> Cancer Centre: Hi {first name}, your first appointment is on {date, time}. Please complete your intake form online before then: {MyConnectedCare link}. Prefer a phone call? Request a nurse call: {help link}. Please bring an official list of your current medications.
+**Default text message draft:** the same as the default email draft above (without the subject line), with the "Open MyConnectedCare" button as a link, sent from "WRHN Cancer Centre".
 
 ### 5.3 MyConnectedCare (patient portal)
 
@@ -168,6 +167,7 @@ Some patients do not check email often and may miss their appointment and intake
   - On submit, `completed_by = nurse`, and the same AI summary pipeline runs (section 6), sending the result to the EMR.
   - The help request is marked `completed`.
 - **Upcoming intakes list:** all referrals with appointment dates and status. A nurse can see who has completed the form online, who requested a call and who hasn't done anything yet.
+  - Nurses are the ones who check the digital intake form status, so this list must show clearly that both messages went out: after the intake has been sent, the status says **"Email and Text Message sent"**, so the nurse knows the patient received both. The e2e screenshot for this is taken from the nurse's login (this list), not the admin's.
 
 ### 5.6 Intake Assistant: co-op student flow (non-tech solution)
 
@@ -301,7 +301,7 @@ These must work end to end, starting from a fresh reset.
 - **Use this subset:**
   - **About you:** preferred name, preferred spoken language, preferred way to be contacted, any hearing, vision or other sensory needs (and devices used), whether they are the main caregiver for someone (and whether arrangements are made), and whether they are in a clinical trial (and which one).
   - **Allergies:** what they're allergic to and what happens.
-  - **Current medications:** a repeatable list of name, dose and how often. Remind them to bring their official medication list.
+  - **Current medications:** a repeatable list of name, dose, unit and how often. Dose is a number (for example 500) and unit is a dropdown (mg, g, mcg, mL, IU, units, tablets, other), shown as two separate boxes between the name and "how often". If a row has a medication name but the dose or the unit is missing, show a gentle notice ("Please add the dose" / "Please choose a unit") that never blocks Next or saving, and flag the row in the AI summary (Current medications bullet and Flagged / missing items, added by code) so the oncologist can ask at the visit. Remind them to bring their official medication list.
     - **Unusual dose check:** if a dose looks like a typing mistake (for example metformin 100 g/day), ask "Are you sure about your dose of {medication} {dose}/{frequency}?" with **Yes** and **No**. Autosave is never blocked, but Next, "Save and finish later" and "Send to my care team" pause until each unusual row is answered (Yes or No both let the person continue). A Yes is saved with the answer and carried into the AI summary (Current medications bullet and Flagged items) and the consultation note, so the oncologist can verify the dose at the first visit.
     - **Unusual medication name check:** if a medication name looks misspelt (for example "meform" for metformin), ask "Are you sure about the medication's spelling?" and suggest up to 3 proper spellings the person can click to use. The person answers **Yes** (the spelling is correct as typed) or **No** (it is wrong, so they fix it or pick a suggestion). It follows the same pause rule as the dose check. Whether or not the person corrects the name, the outcome (what they typed, and what it became) is included in the AI summary and consultation note for the oncologist. The AI must never change or "correct" a medication name itself. The reminder to bring an official medication list stays, so the oncologist can cross-check the form against it.
   - **Main concern and symptoms:** what brings them in, pain (where and how bad, on a 0 to 10 scale), and other symptoms (a checklist covering general, breathing/heart, stomach/bowel and bladder symptoms).

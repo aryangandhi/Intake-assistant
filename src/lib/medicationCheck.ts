@@ -107,11 +107,45 @@ export const CONFIRMED_MARKER = "(patient confirmed this unusual dose)";
 
 type Row = Record<string, string>;
 
-export const medSignature = (it: Row) => `${it.name || ""}|${it.dose || ""}|${it.frequency || ""}`;
+/** The dose as one piece of text: the number and the unit together ("500 mg"). Rows saved before the split have the unit inside the dose. */
+export const doseText = (it: Row) => [it.dose, it.unit].map((x) => (x || "").trim()).filter(Boolean).join(" ");
+
+export const medSignature = (it: Row) => `${it.name || ""}|${doseText(it)}|${it.frequency || ""}`;
+
+/** Appended to a row in the formatted answer when the person left the dose and/or the unit empty. */
+export const DOSE_MISSING_MARKER = "(dose missing)";
+export const UNIT_MISSING_MARKER = "(unit missing)";
+export const DOSE_UNIT_MISSING_MARKER = "(dose and unit missing)";
+
+/** What is missing from a row that has a medication name: the dose number, the unit, or both. */
+export function missingDoseParts(it: Row): { dose: boolean; unit: boolean } {
+  if (!(it.name || "").trim()) return { dose: false, unit: false };
+  const dose = (it.dose || "").trim();
+  const unit = (it.unit || "").trim();
+  // Rows saved before the split have the unit typed inside the dose ("500 mg"): that is not a missing unit.
+  return { dose: !dose, unit: !unit && !(dose && /[a-zµ]/i.test(dose)) };
+}
+
+/** True when the row has a medication name but no dose number or no unit. */
+export const isDoseIncomplete = (it: Row) => {
+  const m = missingDoseParts(it);
+  return m.dose || m.unit;
+};
+
+export function missingMarker(it: Row): string {
+  const m = missingDoseParts(it);
+  return m.dose && m.unit ? DOSE_UNIT_MISSING_MARKER : m.dose ? DOSE_MISSING_MARKER : m.unit ? UNIT_MISSING_MARKER : "";
+}
+
+/** "Please add the dose", "Please choose a unit" or both. */
+export function missingDoseNotice(it: Row): string {
+  const m = missingDoseParts(it);
+  return m.dose && m.unit ? "Please add the dose and choose a unit" : m.dose ? "Please add the dose" : m.unit ? "Please choose a unit" : "";
+}
 
 /** True when the person said Yes to "Are you sure?" and has not changed the row since. */
 export function isConfirmedUnusual(it: Row): boolean {
-  return it[CONFIRM_KEY] === medSignature(it) && checkMedication(it.name || "", it.dose || "", it.frequency || "") !== null;
+  return it[CONFIRM_KEY] === medSignature(it) && checkMedication(it.name || "", doseText(it), it.frequency || "") !== null;
 }
 
 /** Key holding the signature of the name/dose/frequency the person said No to (dose is wrong) and left unchanged. */
@@ -121,17 +155,17 @@ export const DOSE_WRONG_MARKER = "(patient said this dose is incorrect)";
 
 /** True when the person said No to "Are you sure?" and has not changed the row since. */
 export function isDoseMarkedWrong(it: Row): boolean {
-  return it[DOSE_WRONG_KEY] === medSignature(it) && checkMedication(it.name || "", it.dose || "", it.frequency || "") !== null;
+  return it[DOSE_WRONG_KEY] === medSignature(it) && checkMedication(it.name || "", doseText(it), it.frequency || "") !== null;
 }
 
 /** True when the dose looks unusual and the person has not answered "Are you sure?" for it yet. */
 export function isDoseUnanswered(it: Row): boolean {
-  return checkMedication(it.name || "", it.dose || "", it.frequency || "") !== null && !isConfirmedUnusual(it) && !isDoseMarkedWrong(it);
+  return checkMedication(it.name || "", doseText(it), it.frequency || "") !== null && !isConfirmedUnusual(it) && !isDoseMarkedWrong(it);
 }
 
 /** "Are you sure about your dose of Metformin 100 g/day/once a day?" */
 export function confirmationQuestion(it: Row): string {
-  const dose = [it.dose?.trim(), it.frequency?.trim()].filter(Boolean).join("/");
+  const dose = [doseText(it), it.frequency?.trim()].filter(Boolean).join("/");
   return `Are you sure about your dose of ${[it.name?.trim(), dose].filter(Boolean).join(" ")}?`;
 }
 
@@ -190,7 +224,7 @@ export const NAME_CORRECTED_PATTERN = /\(patient corrected from '([^']*)'\)/;
 
 /** Removes every "(patient …)" marker from a formatted medication row. */
 export const stripMarkers = (row: string) =>
-  row.replace(CONFIRMED_MARKER, "").replace(DOSE_WRONG_MARKER, "").replace(NAME_CONFIRMED_MARKER, "").replace(NAME_WRONG_MARKER, "").replace(NAME_CORRECTED_PATTERN, "").replace(/\s+/g, " ").trim();
+  row.replace(DOSE_UNIT_MISSING_MARKER, "").replace(DOSE_MISSING_MARKER, "").replace(UNIT_MISSING_MARKER, "").replace(CONFIRMED_MARKER, "").replace(DOSE_WRONG_MARKER, "").replace(NAME_CONFIRMED_MARKER, "").replace(NAME_WRONG_MARKER, "").replace(NAME_CORRECTED_PATTERN, "").replace(/\s+/g, " ").trim();
 
 const unusualName = (it: Row) => checkMedicationName(it.name || "") !== null;
 
