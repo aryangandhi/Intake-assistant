@@ -28,8 +28,10 @@ function browserRecognizer(): SRCtor | null {
 // Set once the browser's own recognizer fails (e.g. "network"); after that we record and transcribe on the server.
 let browserRecognizerBroken = false;
 
-/** How often the recording fallback re-transcribes what has been said so far. */
-const LIVE_CHUNK_MS = 3000;
+/** How often the recording fallback re-transcribes what has been said so far (skipped while a request is still out). */
+const LIVE_CHUNK_MS = 1500;
+/** How often the recorder hands over audio, so the first live update has something to send. */
+const RECORDER_SLICE_MS = 500;
 
 /** True when some form of voice input can work in this browser. */
 export function useSpeechRecognitionSupported() {
@@ -166,7 +168,7 @@ function MicButton({ value, onChange, label }: { value: string; onChange: (v: st
       setState("idle");
     };
     mediaRef.current = mr;
-    mr.start(1000);
+    mr.start(RECORDER_SLICE_MS);
     setState("listening");
   };
 

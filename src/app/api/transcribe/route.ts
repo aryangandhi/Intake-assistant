@@ -40,6 +40,8 @@ export async function POST(req: Request) {
     const text = (res.choices[0]?.message?.content || "").trim().replace(/^"|"$/g, "");
     return NextResponse.json({ text });
   } catch (e) {
+    // The model sometimes answers a recording with no speech (or a very short one) with nothing at all.
+    if (e instanceof Error && /empty response/i.test(e.message)) return NextResponse.json({ text: "" });
     console.error("transcribe failed", e);
     return NextResponse.json({ error: "Could not turn the recording into text. Please try again or type your answer." }, { status: 502 });
   }
