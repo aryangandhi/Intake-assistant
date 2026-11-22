@@ -4,7 +4,6 @@ import type { RawItem } from "@/lib/answers";
 import { buildTemplateSummary } from "./fallback";
 import { ModelSummarySchema, RESPONSE_JSON_SCHEMA, type CheckedSummary, type ModelSummary, type ValidationReport } from "./schema";
 import { validateSummary } from "./validate";
-import { applyDoseConfirmations } from "./doseConfirmations";
 import { applyDoseGaps } from "./doseGaps";
 import { applyNameConfirmations } from "./nameConfirmations";
 
@@ -86,7 +85,6 @@ export async function generateSummary(items: RawItem[], incomplete: string[]): P
           for (const id of incomplete) {
             if (!out.flagged.some((f) => f.field_id === id)) out.flagged.push({ field_id: id, note: `Not answered: ${getQuestion(id)?.label || id}` });
           }
-          applyDoseConfirmations(out, items);
           applyNameConfirmations(out, items);
           applyDoseGaps(out, items);
           const { checked, report } = validateSummary(out, refs, knownIds);
@@ -102,7 +100,7 @@ export async function generateSummary(items: RawItem[], incomplete: string[]): P
     }
   }
 
-  const tpl = applyDoseGaps(applyNameConfirmations(applyDoseConfirmations(buildTemplateSummary(items, incomplete), items), items), items);
+  const tpl = applyDoseGaps(applyNameConfirmations(buildTemplateSummary(items, incomplete), items), items);
   const { checked, report } = validateSummary(tpl, refs, knownIds);
   return { content: checked, validation: report, modelUsed: "Template summary (AI unavailable)", isFallback: true };
 }

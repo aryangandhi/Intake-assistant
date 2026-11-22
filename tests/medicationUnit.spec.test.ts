@@ -5,7 +5,7 @@ import { getQuestion } from "@/config/intakeQuestions";
 import { formatAnswer, type RawItem } from "@/lib/answers";
 import { applyDoseGaps } from "@/lib/ai/doseGaps";
 import type { ModelSummary } from "@/lib/ai/schema";
-import { checkMedication, doseText, isDoseIncomplete } from "@/lib/medicationCheck";
+import { doseText, isDoseIncomplete } from "@/lib/medicationCheck";
 
 const q = getQuestion("med_list")!;
 const empty = (): ModelSummary => ({ paragraph: [], sections: [], flagged: [] });
@@ -23,14 +23,10 @@ describe("spec: the medication row has separate dose and unit fields", () => {
   });
 });
 
-describe("spec: the unusual dose check reads dose and unit together", () => {
+describe("spec: dose and unit read as one", () => {
   it("joins dose and unit", () => {
     expect(doseText({ dose: "500", unit: "mg" })).toBe("500 mg");
     expect(doseText({ dose: "500 mg" })).toBe("500 mg"); // rows saved before the split
-  });
-  it("still flags 100 g of metformin when entered as dose 100 + unit g", () => {
-    expect(checkMedication("Metformin", doseText({ dose: "100", unit: "g" }), "once a day")).not.toBeNull();
-    expect(checkMedication("Metformin", doseText({ dose: "500", unit: "mg" }), "twice a day")).toBeNull();
   });
 });
 

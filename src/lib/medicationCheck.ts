@@ -1,116 +1,22 @@
 /**
- * Typing-mistake check for medication rows (see DECISIONS.md, "unusual medication check").
- * Not medical advice: it only spots doses that look like a slip, e.g. "100 g" for "100 mg".
+ * Medication row checks: a missing dose or unit, and medication names that look misspelt
+ * (see DECISIONS.md). Not medical advice.
  */
 
-/** Typical maximum total per day, in mg, for some common medications. */
-const MAX_DAILY_MG: Record<string, number> = {
-  metformin: 3000,
-  ramipril: 20,
-  lisinopril: 80,
-  amlodipine: 10,
-  atorvastatin: 80,
-  rosuvastatin: 40,
-  metoprolol: 400,
-  levothyroxine: 0.6,
-  warfarin: 15,
-  tamoxifen: 40,
-  letrozole: 2.5,
-  anastrozole: 1,
-  acetaminophen: 4000,
-  tylenol: 4000,
-  ibuprofen: 3200,
-  advil: 3200,
-  aspirin: 4000,
-  omeprazole: 80,
-  prednisone: 100,
-  furosemide: 600,
-  gabapentin: 3600,
-};
-
-export type MedicationWarning = { message: string };
-
-
-/** Reads "1,500", "1 500", "0,5" (decimal comma) and "0.5" as numbers. */
-function parseNumber(raw: string): number {
-  let t = raw.replace(/\s/g, "");
-  if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(t)) t = t.replace(/,/g, ""); // thousands separators
-  else t = t.replace(",", "."); // decimal comma
-  return parseFloat(t);
-}
-
-const UNIT = "milligrams?|micrograms?|grams?|mcg|mg|µg|ug|g";
-const unitMg = (u: string) => (u.startsWith("milli") ? 1 : u.startsWith("micro") || u === "mcg" || u === "µg" || u === "ug" ? 0.001 : u.startsWith("gram") || u === "g" ? 1000 : 1);
-
-function parseDoseMg(dose: string): { mg: number; perDay: boolean } | null {
-  const lower = dose.toLowerCase();
-  const m = lower.match(new RegExp(`(\\d[\\d,. ]*\\d|\\d)\\s*(${UNIT})\\b`));
-  if (!m) return null;
-  // "2 x 500 mg", "2 tablets of 500 mg": multiply by the count in front.
-  const count = lower.slice(0, m.index).match(/(\d+)\s*(?:x|×|tablets?|tabs?|capsules?|caps?|pills?)\s*(?:of\s*)?$/);
-  const mult = count ? parseInt(count[1], 10) : 1;
-  return { mg: parseNumber(m[1]) * unitMg(m[2]) * mult, perDay: /(\/|per|a|each)\s*day|daily total/.test(lower) };
-}
-
-const WORDS: Record<string, number> = { once: 1, one: 1, twice: 2, two: 2, three: 3, four: 4, five: 5, six: 6 };
-
-/** Doses per day, or null when it cannot be read. */
-function parseDosesPerDay(freq: string): number | null {
-  const f = freq.toLowerCase();
-  const every = f.match(/(?:every\s+|\bq\s?)(\d+(?:\.\d+)?)\s*(hours?|hrs?|h)\b/);
-  if (every) return 24 / parseFloat(every[1]);
-  const abbr = f.match(/\b(qd|od|bid|tid|qid)\b/);
-  if (abbr) return { qd: 1, od: 1, bid: 2, tid: 3, qid: 4 }[abbr[1]]!;
-  if (/week/.test(f)) return 1 / 7;
-  const num = f.match(/(\d+)\s*(x|times)/);
-  if (num) return parseInt(num[1], 10);
-  const word = f.match(/\b(once|one|twice|two|three|four|five|six)\b/);
-  if (word) return WORDS[word[1]];
-  if (/\b(daily|day|morning|night|bedtime)\b/.test(f)) return 1;
-  return null;
-}
-
-function fmtMg(mg: number) {
-  return mg >= 1000 ? `${+(mg / 1000).toFixed(2)} g` : `${+mg.toFixed(3)} mg`;
-}
-
-export function checkMedication(name: string, dose: string, frequency: string): MedicationWarning | null {
-  const d = parseDoseMg(dose || "");
-  if (!d) return null;
-  const perDay = parseDosesPerDay(frequency || "");
-  const entered = `${dose.trim()}${frequency.trim() ? `, ${frequency.trim()}` : ""}`;
-
-  if (perDay !== null && perDay > 12 && !d.perDay) {
-    return { message: `You entered "${entered}", which is more than 12 doses a day.` };
-  }
-  if (d.mg >= 10000 && !d.perDay) {
-    return { message: `You entered "${entered}". A single dose of 10 g or more is very unusual.` };
-  }
-
-  const key = Object.keys(MAX_DAILY_MG).find((k) => name.toLowerCase().includes(k));
-  const dailyMg = d.perDay ? d.mg : d.mg * (perDay ?? 1);
-  if (key && dailyMg > MAX_DAILY_MG[key]) {
-    return {
-      message: `You entered "${entered}" (about ${fmtMg(dailyMg)} a day). The usual maximum for ${name.trim()} is about ${fmtMg(MAX_DAILY_MG[key])} a day.`,
-    };
-  }
-  if (!key && d.perDay && d.mg >= 10000) {
-    return { message: `You entered "${entered}". That is a very large amount for one day.` };
-  }
-  return null;
-}
-
-/** Key on a medication row that holds the signature of the name/dose/frequency the person confirmed. */
-export const CONFIRM_KEY = "doseConfirmed";
-/** Appended to a confirmed row in the formatted answer, so the AI summary and clinic note can see it. */
-export const CONFIRMED_MARKER = "(patient confirmed this unusual dose)";
+/**
+ * Common medication names the spelling check compares against. These used to carry daily dose limits for an
+ * "Are you sure about your dose?" check, which was removed (see DECISIONS.md, "unusual medication check removed").
+ */
+const COMMON_NAMES = [
+  "metformin", "ramipril", "lisinopril", "amlodipine", "atorvastatin", "rosuvastatin", "metoprolol", "levothyroxine",
+  "warfarin", "tamoxifen", "letrozole", "anastrozole", "acetaminophen", "tylenol", "ibuprofen", "advil", "aspirin",
+  "omeprazole", "prednisone", "furosemide", "gabapentin",
+];
 
 type Row = Record<string, string>;
 
 /** The dose as one piece of text: the number and the unit together ("500 mg"). Rows saved before the split have the unit inside the dose. */
 export const doseText = (it: Row) => [it.dose, it.unit].map((x) => (x || "").trim()).filter(Boolean).join(" ");
-
-export const medSignature = (it: Row) => `${it.name || ""}|${doseText(it)}|${it.frequency || ""}`;
 
 /** Appended to a row in the formatted answer when the person left the dose and/or the unit empty. */
 export const DOSE_MISSING_MARKER = "(dose missing)";
@@ -143,41 +49,15 @@ export function missingDoseNotice(it: Row): string {
   return m.dose && m.unit ? "Please add the dose and choose a unit" : m.dose ? "Please add the dose" : m.unit ? "Please choose a unit" : "";
 }
 
-/** True when the person said Yes to "Are you sure?" and has not changed the row since. */
-export function isConfirmedUnusual(it: Row): boolean {
-  return it[CONFIRM_KEY] === medSignature(it) && checkMedication(it.name || "", doseText(it), it.frequency || "") !== null;
-}
-
-/** Key holding the signature of the name/dose/frequency the person said No to (dose is wrong) and left unchanged. */
-export const DOSE_WRONG_KEY = "doseWrong";
-/** Appended to a row whose unusual dose the person said was wrong but did not fix. */
-export const DOSE_WRONG_MARKER = "(patient said this dose is incorrect)";
-
-/** True when the person said No to "Are you sure?" and has not changed the row since. */
-export function isDoseMarkedWrong(it: Row): boolean {
-  return it[DOSE_WRONG_KEY] === medSignature(it) && checkMedication(it.name || "", doseText(it), it.frequency || "") !== null;
-}
-
-/** True when the dose looks unusual and the person has not answered "Are you sure?" for it yet. */
-export function isDoseUnanswered(it: Row): boolean {
-  return checkMedication(it.name || "", doseText(it), it.frequency || "") !== null && !isConfirmedUnusual(it) && !isDoseMarkedWrong(it);
-}
-
-/** "Are you sure about your dose of Metformin 100 g/day/once a day?" */
-export function confirmationQuestion(it: Row): string {
-  const dose = [doseText(it), it.frequency?.trim()].filter(Boolean).join("/");
-  return `Are you sure about your dose of ${[it.name?.trim(), dose].filter(Boolean).join(" ")}?`;
-}
-
 /* ---------- Medication NAME spelling check (see DECISIONS.md, "unusual medication name check") ---------- */
 
-/** Other common names to compare against, on top of the ones that have dose limits above. */
+/** More common names to compare against. */
 const EXTRA_NAMES = [
   "simvastatin", "pantoprazole", "hydrochlorothiazide", "losartan", "sertraline", "citalopram", "oxycodone", "morphine",
   "codeine", "tramadol", "ondansetron", "dexamethasone", "capecitabine", "insulin", "lorazepam", "clopidogrel",
   "apixaban", "salbutamol", "montelukast", "cetirizine", "loratadine", "naproxen", "diclofenac", "hydromorphone",
 ];
-const KNOWN_NAMES = Array.from(new Set([...Object.keys(MAX_DAILY_MG), ...EXTRA_NAMES]));
+const KNOWN_NAMES = Array.from(new Set([...COMMON_NAMES, ...EXTRA_NAMES]));
 const properCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Edit distance counting a swap of two neighbouring letters as one edit. */
@@ -224,7 +104,7 @@ export const NAME_CORRECTED_PATTERN = /\(patient corrected from '([^']*)'\)/;
 
 /** Removes every "(patient …)" marker from a formatted medication row. */
 export const stripMarkers = (row: string) =>
-  row.replace(DOSE_UNIT_MISSING_MARKER, "").replace(DOSE_MISSING_MARKER, "").replace(UNIT_MISSING_MARKER, "").replace(CONFIRMED_MARKER, "").replace(DOSE_WRONG_MARKER, "").replace(NAME_CONFIRMED_MARKER, "").replace(NAME_WRONG_MARKER, "").replace(NAME_CORRECTED_PATTERN, "").replace(/\s+/g, " ").trim();
+  row.replace(DOSE_UNIT_MISSING_MARKER, "").replace(DOSE_MISSING_MARKER, "").replace(UNIT_MISSING_MARKER, "").replace(NAME_CONFIRMED_MARKER, "").replace(NAME_WRONG_MARKER, "").replace(NAME_CORRECTED_PATTERN, "").replace(/\s+/g, " ").trim();
 
 const unusualName = (it: Row) => checkMedicationName(it.name || "") !== null;
 

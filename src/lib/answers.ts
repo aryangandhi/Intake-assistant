@@ -1,4 +1,4 @@
-import { CONFIRMED_MARKER, doseText, missingMarker, DOSE_WRONG_MARKER, NAME_CONFIRMED_MARKER, NAME_WRONG_MARKER, isConfirmedUnusual, isDoseMarkedWrong, isNameConfirmed, isNameCorrected, isNameMarkedWrong, nameCorrectedMarker } from "@/lib/medicationCheck";
+import { doseText, missingMarker, NAME_CONFIRMED_MARKER, NAME_WRONG_MARKER, isNameConfirmed, isNameCorrected, isNameMarkedWrong, nameCorrectedMarker } from "@/lib/medicationCheck";
 import { INTAKE_SECTIONS, type Question, sectionsFor } from "@/config/intakeQuestions";
 
 export type RepeatValue = { none?: boolean; items: Record<string, string>[] };
@@ -88,7 +88,6 @@ export function formatAnswer(q: Question, value: AnswerValue): string {
         if (q.id !== "med_list") return row;
         const marks = [
           isNameConfirmed(it) ? NAME_CONFIRMED_MARKER : isNameMarkedWrong(it) ? NAME_WRONG_MARKER : isNameCorrected(it) ? nameCorrectedMarker(it.nameOriginal.trim()) : "",
-          isConfirmedUnusual(it) ? CONFIRMED_MARKER : isDoseMarkedWrong(it) ? DOSE_WRONG_MARKER : "",
           missingMarker(it),
         ].filter(Boolean);
         return [row, ...marks].join(" ");
