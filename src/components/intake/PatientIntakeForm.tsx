@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Question, Section } from "@/config/intakeQuestions";
 import { isAnswered, isVisible, type AnswerValue, type Answers, type RepeatValue } from "@/lib/answers";
-import { isDoseUnanswered, isNameUnanswered } from "@/lib/medicationCheck";
+import { isNameUnanswered } from "@/lib/medicationCheck";
 import { randomAnswers } from "@/lib/randomFill";
 import { readAloudText } from "@/lib/readAloud";
 import { InfoButton, QuestionInput, speak, useSpeechRecognitionSupported } from "./QuestionInput";
@@ -29,7 +29,7 @@ export function PatientIntakeForm({
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [submitting, startSubmit] = useTransition();
   const [focusTarget, setFocusTarget] = useState<string | null>(null);
-  // Set once the person tries to save or move on with an unusual dose they have not confirmed.
+  // Set once the person tries to save or move on with a medication spelling they have not answered.
   const [checkAllMeds, setCheckAllMeds] = useState(false);
   const dirty = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,11 +94,11 @@ export function PatientIntakeForm({
     return out;
   }, [answers, sections]);
 
-  /** True (and shows the "Are you sure?" question) when a medication row looks unusual and is not yet confirmed. */
+  /** True (and shows the spelling question) when a medication name looks misspelt and is not yet answered. */
   const blockOnUnconfirmedMeds = () => {
     const med = answers.med_list as RepeatValue | undefined;
     if (!med || med.none) return false;
-    if (!(med.items || []).some((it) => isDoseUnanswered(it) || isNameUnanswered(it))) return false;
+    if (!(med.items || []).some((it) => isNameUnanswered(it))) return false;
     setCheckAllMeds(true);
     const medStep = sections.findIndex((s) => s.questions.some((q) => q.id === "med_list"));
     if (medStep >= 0) setStep(medStep);

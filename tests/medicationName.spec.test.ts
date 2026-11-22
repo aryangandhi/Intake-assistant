@@ -18,7 +18,6 @@ import type { ModelSummary } from "@/lib/ai/schema";
 import { validateSummary } from "@/lib/ai/validate";
 import { noteFromSummary } from "@/lib/clinicNote";
 import {
-  CONFIRM_KEY,
   NAME_CONFIRM_KEY,
   NAME_CONFIRMED_MARKER,
   NAME_ORIGINAL_KEY,
@@ -29,7 +28,6 @@ import {
   isNameMarkedWrong,
   isNameCorrected,
   isNameUnanswered,
-  medSignature,
   nameConfirmationQuestion,
   nameCorrectedMarker,
 } from "@/lib/medicationCheck";
@@ -114,10 +112,9 @@ describe("spec: the question and the pause rule", () => {
   it("a fix that is itself still misspelt is not answered", () => {
     expect(isNameUnanswered(corrected("meform", "metfromin"))).toBe(true);
   });
-  it("is independent of the dose confirmation", () => {
+  it("does not depend on the dose", () => {
     const r = { name: "meform", dose: "100 g/day", frequency: "once a day", [NAME_CONFIRM_KEY]: "meform" };
-    expect(isNameUnanswered(r)).toBe(false); // name answered, dose still needs its own answer
-    expect(CONFIRM_KEY in r).toBe(false);
+    expect(isNameUnanswered(r)).toBe(false);
   });
 });
 
@@ -146,12 +143,10 @@ describe("spec: the outcome travels with the answer", () => {
     expect(ans.split("; ")[1]).toBe("Ramipril, 10 mg, daily");
     expect(ans.match(/patient/g)).toHaveLength(1);
   });
-  it("a row can carry both the name mark and the dose mark", () => {
-    const r = { name: "meform", dose: "100 g/day", frequency: "once a day" };
-    const row = { ...r, [NAME_CONFIRM_KEY]: "meform", [CONFIRM_KEY]: medSignature(r) };
+  it("no dose mark is added any more, even for a large dose (dose check removed)", () => {
+    const row = { name: "meform", dose: "100 g/day", frequency: "once a day", [NAME_CONFIRM_KEY]: "meform", doseConfirmed: "meform|100 g/day|once a day" };
     const ans = formatAnswer(q, { items: [row] });
-    expect(ans).toContain("confirmed this spelling as typed");
-    expect(ans).toContain("confirmed this unusual dose");
+    expect(ans).toBe(`meform, 100 g/day, once a day ${NAME_CONFIRMED_MARKER}`);
   });
 });
 
