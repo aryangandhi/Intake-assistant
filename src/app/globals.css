@@ -38,6 +38,7 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
   box-shadow: 0 0 0 2px #8e9096, 0 0 0 4px #3a3a3c, 0 30px 60px -20px rgba(15, 23, 42, 0.45);
 }
 .iphone-screen {
+  container-type: size; /* lock screen sizes follow the phone, not the browser window */
   position: relative; height: 100%; width: 100%; overflow: hidden;
   border-radius: calc(var(--ph) * 0.062);
   background: #000;
@@ -67,13 +68,13 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
 .ios-dots span.filled { background: #fff; }
 .ios-shake { animation: ios-shake .4s; }
 @keyframes ios-shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-12px); } 40%,80% { transform: translateX(12px); } }
-.ios-keypad { display: grid; grid-template-columns: repeat(3, auto); column-gap: min(26px, 5.5vw); row-gap: 15px; justify-items: center; align-items: center; }
-.ios-key { width: min(76px, 19vw); height: min(76px, 19vw); border-radius: 50%; border: 0; color: #fff; background: rgba(255,255,255,0.18); backdrop-filter: blur(12px); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: background .08s; }
+.ios-keypad { display: grid; grid-template-columns: repeat(3, auto); column-gap: min(26px, 7cqw); row-gap: min(15px, 2.2cqh); justify-items: center; align-items: center; }
+.ios-key { width: min(76px, 22cqw, 10.5cqh); height: min(76px, 22cqw, 10.5cqh); border-radius: 50%; border: 0; color: #fff; background: rgba(255,255,255,0.18); backdrop-filter: blur(12px); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: background .08s; }
 .ios-key:active { background: rgba(255,255,255,0.5); }
 .ios-key:focus-visible { outline: 2px solid #fff; }
-.ios-key-digit { font-size: 34px; line-height: 1; font-weight: 400; }
-.ios-key-letters { font-size: 10px; letter-spacing: 2px; font-weight: 600; margin-top: 2px; }
-.ios-key-text { font-size: 16px; color: #fff; background: none; border: 0; cursor: default; }
+.ios-key-digit { font-size: min(34px, 9.5cqw); line-height: 1; font-weight: 400; }
+.ios-key-letters { font-size: min(10px, 2.8cqw); letter-spacing: min(2px, 0.5cqw); font-weight: 600; margin-top: 2px; }
+.ios-key-text { font-size: min(16px, 4.6cqw); white-space: nowrap; color: #fff; background: none; border: 0; cursor: default; }
 .ios-key-delete { cursor: pointer; }
 
 /* Messages app */
