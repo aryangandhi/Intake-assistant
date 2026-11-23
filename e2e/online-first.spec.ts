@@ -1,5 +1,16 @@
 import { test, expect, type Page } from "@playwright/test";
 
+// /messages shows a simulated iPhone that starts locked; the demo passcode is 0000.
+async function openMessages(page: Page) {
+  await page.goto("/messages");
+  const lock = page.getByTestId("lock-screen");
+  if (await lock.isVisible()) {
+    await expect(lock).toHaveAttribute("data-ready", "true");
+    for (let i = 0; i < 4; i++) await lock.getByRole("button", { name: "0", exact: true }).click();
+  }
+  await expect(page.getByTestId("messages-view")).toBeVisible();
+}
+
 // Online intake is offered first; the nurse call option follows (peer feedback).
 // Saves screenshots to docs/screenshots for the pull request.
 
@@ -38,7 +49,7 @@ test("Email: online intake comes before the nurse call option", async ({ page })
 
 test("Text message: online intake comes before the nurse call option", async ({ page }) => {
   await signInToInbox(page, "jane.doe@example.com");
-  await page.goto("/messages");
+  await openMessages(page);
   const text = page.getByTestId("text-message").first();
   const online = text.getByRole("link", { name: "Open MyConnectedCare" });
   const nurse = text.getByRole("link", { name: "Request a nurse call" });

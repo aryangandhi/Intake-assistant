@@ -24,3 +24,82 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
 .raw-highlight { animation: flash 2.2s ease-out; box-shadow: inset 4px 0 0 #d97706; }
 
 @media print { .no-print { display: none !important; } }
+
+/* Simulated iPhone on /messages (lock screen + Messages app) */
+.iphone {
+  --ph: min(800px, max(560px, calc(100vh - 210px)));
+  position: relative;
+  height: var(--ph);
+  width: calc(var(--ph) * 0.49);
+  max-width: calc(100vw - 32px);
+  padding: 11px;
+  border-radius: calc(var(--ph) * 0.075);
+  background: #1c1c1e;
+  box-shadow: 0 0 0 2px #8e9096, 0 0 0 4px #3a3a3c, 0 30px 60px -20px rgba(15, 23, 42, 0.45);
+}
+.iphone-screen {
+  position: relative; height: 100%; width: 100%; overflow: hidden;
+  border-radius: calc(var(--ph) * 0.062);
+  background: #000;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.iphone-island { position: absolute; z-index: 30; top: 11px; left: 50%; transform: translateX(-50%); width: 32%; height: 31px; border-radius: 20px; background: #000; }
+.iphone-btn { position: absolute; width: 4px; background: #5b5d63; border: 0; padding: 0; }
+.iphone-btn.side { right: -6px; top: 26%; height: 11%; border-radius: 0 3px 3px 0; cursor: pointer; }
+.iphone-btn.side:hover, .iphone-btn.side:focus-visible { background: #0b6e69; outline: none; }
+.iphone-btn.action { left: -6px; top: 16%; height: 4%; border-radius: 3px 0 0 3px; }
+.iphone-btn.vol-up { left: -6px; top: 23%; height: 8%; border-radius: 3px 0 0 3px; }
+.iphone-btn.vol-down { left: -6px; top: 33%; height: 8%; border-radius: 3px 0 0 3px; }
+
+.ios-status { position: relative; z-index: 20; display: flex; align-items: center; justify-content: space-between; height: 52px; padding: 6px 28px 0 34px; font-weight: 600; font-size: 16px; }
+.ios-status-icons { display: flex; align-items: center; gap: 6px; }
+.ios-home-indicator { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 36%; height: 5px; border-radius: 3px; background: #000; z-index: 25; }
+.ios-home-indicator.light { background: #fff; }
+
+/* Lock screen */
+.ios-lock { position: absolute; inset: 0; display: flex; flex-direction: column; color: #fff;
+  background: radial-gradient(120% 80% at 20% 10%, #3b6ea8 0%, transparent 60%), radial-gradient(100% 70% at 90% 90%, #0b6e69 0%, transparent 60%), linear-gradient(160deg, #1d2b4a, #10243a 55%, #0a1a24); }
+.ios-lock-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 0 36px; }
+.ios-lock-title { margin: 12px 0 14px; font-size: 20px; font-weight: 500; }
+.ios-dots { display: flex; gap: 22px; margin-bottom: 7%; }
+.ios-dots span { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid #fff; transition: background .1s; }
+.ios-dots span.filled { background: #fff; }
+.ios-shake { animation: ios-shake .4s; }
+@keyframes ios-shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-12px); } 40%,80% { transform: translateX(12px); } }
+.ios-keypad { display: grid; grid-template-columns: repeat(3, auto); column-gap: min(26px, 5.5vw); row-gap: 15px; justify-items: center; align-items: center; }
+.ios-key { width: min(76px, 19vw); height: min(76px, 19vw); border-radius: 50%; border: 0; color: #fff; background: rgba(255,255,255,0.18); backdrop-filter: blur(12px); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: background .08s; }
+.ios-key:active { background: rgba(255,255,255,0.5); }
+.ios-key:focus-visible { outline: 2px solid #fff; }
+.ios-key-digit { font-size: 34px; line-height: 1; font-weight: 400; }
+.ios-key-letters { font-size: 10px; letter-spacing: 2px; font-weight: 600; margin-top: 2px; }
+.ios-key-text { font-size: 16px; color: #fff; background: none; border: 0; cursor: default; }
+.ios-key-delete { cursor: pointer; }
+
+/* Messages app */
+.ios-messages { position: absolute; inset: 0; display: flex; flex-direction: column; background: #fff; color: #000; }
+.ios-msg-header { position: relative; z-index: 10; background: rgba(246,246,248,0.94); border-bottom: 0.5px solid #c6c6c8; }
+.ios-msg-contact { position: relative; display: flex; flex-direction: column; align-items: center; padding: 2px 16px 8px; }
+.ios-back { position: absolute; left: 16px; top: 16px; }
+.ios-avatar { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(#a5abb8, #858994); color: #fff; font-size: 21px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.ios-contact-name { margin-top: 4px; font-size: 12px; color: #000; }
+.ios-contact-name span { color: #8e8e93; }
+.ios-msg-scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 6px 12px 12px; scrollbar-width: thin; }
+.ios-msg-scroll:focus { outline: none; }
+.ios-msg-note { margin: 10px 0; text-align: center; color: #8e8e93; font-size: 14px; }
+.ios-msg-note.small { font-size: 12px; margin-bottom: 0; }
+.ios-msg-note a { color: #007aff; text-decoration: underline; }
+.ios-thread { list-style: none; margin: 0; padding: 0; }
+.ios-time { margin: 12px 0 6px; text-align: center; font-size: 12px; color: #8e8e93; }
+.ios-bubble { position: relative; max-width: 82%; width: fit-content; padding: 9px 13px; border-radius: 19px; background: #e9e9eb; font-size: 16px; line-height: 1.32; }
+.ios-bubble::before { content: ""; position: absolute; left: -7px; bottom: 0; width: 20px; height: 18px; background: #e9e9eb; border-bottom-right-radius: 16px 14px; }
+.ios-bubble::after { content: ""; position: absolute; left: -10px; bottom: 0; width: 10px; height: 18px; background: #fff; border-bottom-right-radius: 10px; }
+.email-body.ios-bubble p { margin: 0 0 0.7rem; line-height: 1.32; }
+.email-body.ios-bubble p:last-child { margin-bottom: 0; }
+.email-body.ios-bubble ol { margin: 0 0 0.7rem; padding-left: 1.3rem; }
+.email-body.ios-bubble li { margin-bottom: 0.2rem; }
+.email-body.ios-bubble a { color: #007aff; }
+.email-body.ios-bubble a.ios-link-strong { font-weight: 700; font-size: 17px; }
+.ios-compose { display: flex; align-items: center; gap: 10px; padding: 8px 12px 30px; background: #fff; }
+.ios-plus { width: 32px; height: 32px; border-radius: 50%; background: #e9e9eb; color: #6b6b70; display: flex; align-items: center; justify-content: center; font-size: 24px; line-height: 1; }
+.ios-input { flex: 1; border: 1px solid #d1d1d6; border-radius: 18px; padding: 6px 14px; color: #a1a1a6; font-size: 15px; }
