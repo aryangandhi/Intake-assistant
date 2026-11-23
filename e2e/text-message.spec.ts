@@ -5,6 +5,17 @@ import { test, expect, type Page } from "@playwright/test";
 
 const PASSWORD = "password";
 
+// /messages shows a simulated iPhone that starts locked; the demo passcode is 0000.
+async function openMessages(page: Page) {
+  await page.goto("/messages");
+  const lock = page.getByTestId("lock-screen");
+  if (await lock.isVisible()) {
+    await expect(lock).toHaveAttribute("data-ready", "true");
+    for (let i = 0; i < 4; i++) await lock.getByRole("button", { name: "0", exact: true }).click();
+  }
+  await expect(page.getByTestId("messages-view")).toBeVisible();
+}
+
 async function signInToInbox(page: Page, email: string) {
   await page.goto("/inbox");
   await page.getByLabel(/email/i).first().fill(email);
@@ -23,7 +34,7 @@ test("Seeded patient has an intake text message with the exact same information 
   await page.getByRole("link", { name: /Action needed: Complete your new patient intake form/ }).click();
   const emailBody = await page.locator("p", { hasText: /Your first appointment at the Cancer Centre is on/ }).locator("xpath=..").innerText();
 
-  await page.goto("/messages");
+  await openMessages(page);
   const text = page.getByTestId("text-message").first();
   await expect(text).toBeVisible();
 
@@ -55,7 +66,7 @@ test("Seeded patient has an intake text message with the exact same information 
 
 test("The nurse call link in the text message opens the help request form", async ({ page }) => {
   await signInToInbox(page, "jane.doe@example.com");
-  await page.goto("/messages");
+  await openMessages(page);
   await page.getByTestId("text-message").first().getByRole("link", { name: /nurse call/i }).click();
   await expect(page).toHaveURL(/request-help/);
 });
@@ -93,7 +104,7 @@ test("A new referral within 7 days gets a text message right away, along with th
   await nurse.screenshot({ path: "docs/screenshots/nurse-upcoming-email-and-text-sent.png", fullPage: true });
 
   await signInToInbox(page, "text.patient@example.com");
-  await page.goto("/messages");
+  await openMessages(page);
   await expect(page.getByTestId("text-message")).toHaveCount(1);
   await expect(page.getByTestId("text-message")).toContainText("Hello Text");
 });
@@ -123,7 +134,7 @@ test("A referral more than 7 days away sends the email and the text together whe
   // Nothing is sent yet.
   await signInToInbox(page, "later.patient@example.com");
   await expect(page.getByText("No emails yet.")).toBeVisible();
-  await page.goto("/messages");
+  await openMessages(page);
   await expect(page.getByTestId("text-message")).toHaveCount(0);
 
   // The demo button sends both.
@@ -133,7 +144,7 @@ test("A referral more than 7 days away sends the email and the text together whe
   await expect(row.getByRole("button", { name: "Send intake email now (demo)" })).toHaveCount(0); // wait for the send to finish
   await page.goto("/inbox");
   await expect(page.getByRole("link", { name: /Action needed/ })).toBeVisible();
-  await page.goto("/messages");
+  await openMessages(page);
   await expect(page.getByTestId("text-message")).toHaveCount(1);
 });
 
@@ -156,4 +167,39 @@ test("The referral form cannot be saved without a phone number or an email", asy
   await page.getByRole("button", { name: "Save referral" }).click();
   await expect(page).toHaveURL(/\/referrals\/new/);
   await expect(page.getByRole("alert").filter({ hasText: "Please fix the following" })).toContainText("Enter an email");
+});
+
+test("Text messages open on an iPhone lock screen that unlocks with 0000, and have no email inbox link", async ({ page }) => {
+  await signInToInbox(page, "jane.doe@example.com");
+  await page.goto("/messages");
+  await expect(page.getByRole("link", { name: "Email inbox" })).toHaveCount(0);
+  const lock = page.getByTestId("lock-screen");
+  await expect(lock).toHaveAttribute("data-ready", "true");
+  await expect(page.getByTestId("text-message")).toHaveCount(0); // nothing readable while locked
+
+  // A wrong code keeps the phone locked
+  for (const d of "1234") await lock.getByRole("button", { name: d, exact: true }).click();
+  await expect(lock.getByText("Wrong Passcode")).toBeVisible();
+  await expect(page.getByTestId("messages-view")).toHaveCount(0);
+
+  // 0000 opens the Messages conversation
+  await page.keyboard.type("0000");
+  await expect(page.getByTestId("messages-view")).toBeVisible();
+  await expect(page.getByTestId("text-message").first()).toContainText("Hello Jane");
+
+  // Coming back stays unlocked; the side button locks it again
+  await page.reload();
+  await expect(page.getByTestId("messages-view")).toBeVisible();
+  await page.getByRole("button", { name: "Lock phone" }).click();
+  await expect(page.getByTestId("lock-screen")).toBeVisible();
+});
+
+test("The phone shows the text messages without signing in, and Open MyConnectedCare signs the patient straight in", async ({ page }) => {
+  await openMessages(page); // no inbox sign-in
+  const text = page.getByTestId("text-message").last();
+  await expect(text).toContainText(/Hello \w+/);
+  await expect(page.getByText(/sign in to your inbox/i)).toHaveCount(0);
+  await text.getByRole("link", { name: "Open MyConnectedCare" }).click();
+  await expect(page).toHaveURL(/\/myconnectedcare$/);
+  await expect(page.getByRole("heading", { name: /sign in|log in/i })).toHaveCount(0);
 });
