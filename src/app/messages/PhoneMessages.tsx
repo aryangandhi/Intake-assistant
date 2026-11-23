@@ -108,7 +108,7 @@ function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   );
 }
 
-function MessagesView({ sender, texts, signedIn }: { sender: string; texts: Text[]; signedIn: boolean }) {
+function MessagesView({ sender, texts }: { sender: string; texts: Text[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastRef = useRef<HTMLLIElement>(null);
   // Open on the newest message, showing its start (like tapping a new text).
@@ -132,11 +132,7 @@ function MessagesView({ sender, texts, signedIn }: { sender: string; texts: Text
         </div>
       </div>
       <div ref={scrollRef} className="ios-msg-scroll" tabIndex={0} aria-label={`Conversation with ${sender}`}>
-        {!signedIn ? (
-          <p className="ios-msg-note">
-            Please <a href="/inbox">sign in to your inbox</a> first to see your text messages.
-          </p>
-        ) : texts.length === 0 ? (
+        {texts.length === 0 ? (
           <p className="ios-msg-note">No text messages yet.</p>
         ) : (
           <>
@@ -165,7 +161,7 @@ function MessagesView({ sender, texts, signedIn }: { sender: string; texts: Text
   );
 }
 
-export function PhoneMessages({ initiallyUnlocked, signedIn, sender, texts }: { initiallyUnlocked: boolean; signedIn: boolean; sender: string; texts: Text[] }) {
+export function PhoneMessages({ initiallyUnlocked, sender, texts }: { initiallyUnlocked: boolean; sender: string; texts: Text[] }) {
   const [unlocked, setUnlocked] = useState(initiallyUnlocked);
 
   const unlock = useCallback(() => {
@@ -187,7 +183,7 @@ export function PhoneMessages({ initiallyUnlocked, signedIn, sender, texts }: { 
         <span className="iphone-btn vol-down" aria-hidden="true" />
         <div className="iphone-screen">
           <div className="iphone-island" aria-hidden="true" />
-          {unlocked ? <MessagesView sender={sender} texts={texts} signedIn={signedIn} /> : <LockScreen onUnlock={unlock} />}
+          {unlocked ? <MessagesView sender={sender} texts={texts} /> : <LockScreen onUnlock={unlock} />}
         </div>
       </div>
       <p className="text-center text-sm text-gray-600">

@@ -16,10 +16,14 @@ function iosTimestamp(d: Date): string {
 
 export default async function MessagesPage() {
   const store = await cookies();
-  // Same patient sign-in as the simulated email inbox.
+  // No sign-in: unlocking the phone is enough. The phone belongs to the patient signed in to the
+  // simulated email inbox if there is one, otherwise to the patient who got the most recent text
+  // (each demo round the admin enters a new referral, so that is the newest patient).
   const email = store.get("proto_inbox")?.value;
   const unlocked = store.get(PHONE_UNLOCK_COOKIE)?.value === "1";
-  const referral = email ? await prisma.referral.findFirst({ where: { email } }) : null;
+  const referral = email
+    ? await prisma.referral.findFirst({ where: { email } })
+    : (await prisma.textMessage.findFirst({ orderBy: { sentAt: "desc" }, include: { referral: true } }))?.referral ?? null;
   // Oldest first, newest at the bottom, like the iPhone Messages app.
   const texts = referral ? await prisma.textMessage.findMany({ where: { referralId: referral.id }, orderBy: { sentAt: "asc" } }) : [];
 
@@ -31,7 +35,6 @@ export default async function MessagesPage() {
       <main className="flex flex-1 flex-col items-center px-4 py-6">
         <PhoneMessages
           initiallyUnlocked={unlocked}
-          signedIn={!!referral}
           sender={INTAKE_TEXT_SENDER}
           texts={texts.map((t) => ({ id: t.id, html: t.bodyHtml, time: iosTimestamp(t.sentAt) }))}
         />

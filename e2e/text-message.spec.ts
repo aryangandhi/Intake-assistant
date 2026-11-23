@@ -193,3 +193,13 @@ test("Text messages open on an iPhone lock screen that unlocks with 0000, and ha
   await page.getByRole("button", { name: "Lock phone" }).click();
   await expect(page.getByTestId("lock-screen")).toBeVisible();
 });
+
+test("The phone shows the text messages without signing in, and Open MyConnectedCare signs the patient straight in", async ({ page }) => {
+  await openMessages(page); // no inbox sign-in
+  const text = page.getByTestId("text-message").last();
+  await expect(text).toContainText(/Hello \w+/);
+  await expect(page.getByText(/sign in to your inbox/i)).toHaveCount(0);
+  await text.getByRole("link", { name: "Open MyConnectedCare" }).click();
+  await expect(page).toHaveURL(/\/myconnectedcare$/);
+  await expect(page.getByRole("heading", { name: /sign in|log in/i })).toHaveCount(0);
+});
